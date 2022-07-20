@@ -1,21 +1,17 @@
+import Logo from '../Logo/Logo';
 import classes from './Header.module.css';
+import { NavLink } from 'react-router-dom';
 
 export default function Header(){
     return(
         <div className={classes.header}>
-            <div className={classes.logoDiv}>
-                <img className={classes.logo} 
-                src={require('../../images/f1_logo.jpg')} 
-                alt="f1 logo"
-                width="120" height="40"
-                />
-            </div>
+            <Logo/>
             <div className={classes.menu}>
-                <h4>Home</h4>
-                <h4>My Predictions</h4>
-                <h4>Championship table</h4>
-                <h4>Memes</h4>
-                <h4>Credits</h4>
+                <NavLink to="/home" className={({ isActive }) =>(isActive ? classes.active : classes.link)}>Home</NavLink>
+                <NavLink to="/my-predictions" className={({ isActive }) =>(isActive ? classes.active : classes.link)}>My Predictions</NavLink>
+                <NavLink to="/championship" className={({ isActive }) =>(isActive ? classes.active : classes.link)}>Championship leaderboard</NavLink>
+                <NavLink to="/memes" className={({ isActive }) =>(isActive ? classes.active : classes.link)}>Memes</NavLink>
+                <NavLink to="/credits" className={({ isActive }) =>(isActive ? classes.active : classes.link)}>Credits</NavLink>
             </div>
             <div className={classes.inputDiv}>
                 <input className={classes.input} type="search" />
