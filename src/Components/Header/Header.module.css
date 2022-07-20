@@ -1,0 +1,40 @@
+.header{
+    background-color: rgb(255, 6, 0);
+    color: white;
+    display: flex;
+    justify-content: space-around;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.logoDiv{
+    display: flex;
+}
+
+.logo{
+    margin: 10px;
+}
+
+.menu{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.menu h4{
+    margin:0 10px;
+    padding: 0;
+}
+
+.inputDiv{
+    display: flex;
+}
+
+.input{
+    text-align: center;
+    height: 25px;
+    width: 200px;
+    border-radius: 20px;
+    margin: auto;
+}
