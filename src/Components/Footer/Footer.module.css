@@ -9,6 +9,7 @@
     justify-content: space-around;
     box-sizing: border-box;
     align-items: center;
+    font-weight: 600;
 }
 
 .list{

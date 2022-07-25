@@ -20,6 +20,7 @@ export default function Results(){
                         let event = Object.entries(data.MRData.RaceTable.Races[0]);
                         if(event.length > 0){
                             setResult(state => [...state,event])
+                            console.log(data.MRData);
                         }
                     })
                 )}
@@ -43,7 +44,7 @@ export default function Results(){
                     </tr>
                 </thead>
                 <tbody>
-                        {result.map((event, index) => {
+                        {result.map((event, index) => { //вынести в отдельный компонент
                             return(
                                 <tr key={index}>
                                     <td>{index+1}</td>
