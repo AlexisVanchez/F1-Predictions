@@ -1,6 +1,8 @@
 .footer{
-    position: absolute;
-    bottom: 0;
+    position:fixed;
+    left:0px;
+    bottom:0px;
+    width:100%;
     background-color:rgb(255, 6, 0);
     width: 100%;
     display: flex;

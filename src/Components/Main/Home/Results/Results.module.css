@@ -1,0 +1,29 @@
+.races{
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    font-weight: 300;
+}
+
+.table{
+    margin-top: 20px;
+    font-size: 20px;
+    text-align: center;
+}
+
+th{
+    background-color: grey
+}
+
+td{
+    padding: 5px 15px;
+}
+
+td:hover{
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+tr:nth-child( even ){
+    background-color: grey
+}
