@@ -1,9 +1,10 @@
+import { Routes, Route, BrowserRouter} from 'react-router-dom';
+import OverallResults from './Results/OverallResults/OverallResults';
 
-
-export default function Championship(){
+export default function Championship(props){
     return(
         <div>
-            <h1>Championship</h1>
+            <OverallResults />
         </div>
     )
 }
