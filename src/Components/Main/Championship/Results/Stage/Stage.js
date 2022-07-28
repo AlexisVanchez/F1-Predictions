@@ -1,4 +1,6 @@
 import { useParams } from "react-router-dom"
+import Footer from "../../../../Footer/Footer";
+import Header from "../../../../Header/Header";
 
 
 export default function Stage(props){
@@ -9,6 +11,7 @@ export default function Stage(props){
     
     return(
         <div>
+            <Header />
             <table>
                 <thead>
                 <tr>
@@ -24,6 +27,7 @@ export default function Stage(props){
                     {}
                 </tbody>
             </table>
+            <Footer />
         </div>
     )
 }
