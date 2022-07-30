@@ -1,28 +1,35 @@
-import { createSlice, createAsyncThunk} from '@reduxjs/toolkit';
-import {app} from './firebase_config'
-import 'firebase/compat/firestore';
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import { app } from "./firebase_config";
+import "firebase/compat/firestore";
 
-export const getDrivers = createAsyncThunk(
-    'drivers/getDrivers',
-    async () => {
-        let teamsList = []
-        const db = app.firestore();
-        await db.collection('Championship Info')
-        .doc('Teams')
-        .get().then((teams) =>{
-            teams.forEach((doc) =>{
-                teamsList.push(doc.data())
-                console.log(doc.data());
-                return teamsList
-            })
-        })   
-    }
-)
+export const getEventInfo = (state) => {
+  for (let i = 1; i <= 22; i++) {
+    fetch(`http://ergast.com/api/f1/2022/${i}/results.json`)
+      .then((response) => response.json())
+      .then((data) => {
+        let event = Object.entries(data.MRData.RaceTable.Races[0]);
+        if (event.length > 0) {
+          // setResult(state => [...state,event])
+          eventSlice.getInitialState(state);
+        }
+      });
+  }
+};
 
-const reducer = createSlice({
-    name: 'teams',
-    initialState: {
-        teams: [],
+export const eventSlice = createSlice({
+  name: "eventInfo",
+  initialState: {
+    event: "",
+    driver: "",
+    constructor: "",
+  },
+  reducers: {
+    setEvent: (state, action) => {
+      state.event = action.payload;
     },
-})
-export default reducer.reducer;
+  },
+});
+
+export const { setEvent } = eventSlice.actions;
+
+export default eventSlice.reducer;

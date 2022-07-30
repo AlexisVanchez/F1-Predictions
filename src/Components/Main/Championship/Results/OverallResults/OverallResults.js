@@ -1,6 +1,7 @@
 import classes from './OverallResults.module.css';
 import {useEffect, useState} from 'react';
 import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 
 export default function OverallResults(props){
 
@@ -8,6 +9,8 @@ export default function OverallResults(props){
     const [circuit, setCircuit] = useState([]);
     const [driver, setDriver] = useState([]);
     const [constructor, setConstructor] = useState([]);
+
+    const event = useSelector(state => state.eventInfo.event);
 
     function getResults(){
         for(let i = 1; i <= 22; i++){
@@ -57,7 +60,7 @@ export default function OverallResults(props){
                         {result.map((event, index) => {
                         console.log(event)
                             return(
-                                <tr key={index}>
+                                <tr key={event[1][1]}>
                                     <td>{index+1}</td>
                                         <td><Link to={`/championship/${event[4][1].circuitId}`} 
                                         className={classes.link}

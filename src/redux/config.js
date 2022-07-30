@@ -1,8 +1,8 @@
 import { configureStore } from "@reduxjs/toolkit";
-import  reducer  from "./reducer";
+import eventSlice from "./reducer";
 
 export default configureStore({
-    reducer: {
-        teams: reducer
-    }
-})
+  reducer: {
+    eventInfo: eventSlice,
+  },
+});
