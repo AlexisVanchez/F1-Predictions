@@ -8,6 +8,7 @@ import Credits from "./Components/Main/Credits/Credits";
 import Championship from "./Components/Main/Championship/Championship";
 import Stage from "./Components/Main/Championship/Results/Stage/Stage";
 import Login from "./Components/Login/Login";
+import Signup from "./Components/Login/Signup";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route index element={<Login />} />
+          <Route path="signup" element={<Signup />} />
           <Route path="championship" element={<Championship />} />
           <Route path="home" element={<Home />} />
           <Route path="my-predictions" element={<MyPredictions />} />

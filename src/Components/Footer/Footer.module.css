@@ -1,5 +1,4 @@
 .footer{
-    position:absolute;
     left:0px;
     bottom:0px;
     width:100%;
@@ -10,6 +9,7 @@
     box-sizing: border-box;
     align-items: center;
     font-weight: 600;
+    margin-top: 24px;
 }
 
 .list{

@@ -58,7 +58,6 @@ export default function OverallResults(props){
                 </thead>
                 <tbody>
                         {result.map((event, index) => {
-                        console.log(event)
                             return(
                                 <tr key={event[1][1]}>
                                     <td>{index+1}</td>

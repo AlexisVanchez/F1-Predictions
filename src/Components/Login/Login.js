@@ -1,11 +1,11 @@
 import classes from './Login.module.css';
 import {useEffect, useState} from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Login(){
-    const [email, setEmail] = useState([]);
-    const [password, setPassword] = useState([]);
-    const [token, setToken] = useState([]);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [token, setToken] = useState('');
 
     const nav = useNavigate()
 
@@ -22,6 +22,7 @@ export default function Login(){
         })
         .then(response => response.json())
         .then(data =>{
+            console.log(data)
             setToken(data.idToken)
             if(data.idToken === undefined || data.idToken === 0){
                 alert('Invalid email or password')
@@ -51,9 +52,10 @@ export default function Login(){
         <div className={classes.loginPage}>
             <div className={classes.login}>
                 <h1>Login</h1>
-                <input type="email" placeholder="Name" name="name" className={classes.input} onChange={onChangeEmail}/>
+                <input type="email" placeholder="Email" name="email" className={classes.input} onChange={onChangeEmail}/>
                 <input type="password" placeholder="Password" name="password" className={classes.input} onChange={onChangePassword}/>
                 <button type='submit' className={classes.button} onClick={onSubmit}>SIGN IN</button>
+                <Link to={`/signup`}>Register</Link>
             </div>
         </div>
     )
