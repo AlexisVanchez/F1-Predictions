@@ -55,7 +55,7 @@ export default function Login(){
                 <input type="email" placeholder="Email" name="email" className={classes.input} onChange={onChangeEmail}/>
                 <input type="password" placeholder="Password" name="password" className={classes.input} onChange={onChangePassword}/>
                 <button type='submit' className={classes.button} onClick={onSubmit}>SIGN IN</button>
-                <Link to={`/signup`}>Register</Link>
+                <Link to={`/signup`} className={classes.registerBtn}>Register</Link>
             </div>
         </div>
     )

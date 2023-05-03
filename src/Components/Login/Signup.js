@@ -50,11 +50,11 @@ export default function Signup(props){
     return(
         <div className={classes.signupPage}>
             <div className={classes.signup}>
-                <input type="text" placeholder='name' onChange={onChangeName}/>
-                <input type="email" placeholder='email' onChange={onChangeEmail}/>
-                <input type="password" placeholder='password' onChange={onChangePassword}/>
-                <input type="password" placeholder='retype password' onChange={onChangePassword2}/>
-                <button type='submit' className={classes.btn} onClick={register}></button>
+                <input type="text" placeholder='name' onChange={onChangeName} className={classes.input}/>
+                <input type="email" placeholder='email' onChange={onChangeEmail} className={classes.input}/>
+                <input type="password" placeholder='password' onChange={onChangePassword} className={classes.input}/>
+                <input type="password" placeholder='retype password' onChange={onChangePassword2} className={classes.input}/>
+                <button type='submit' className={classes.btn} onClick={register}>Register new account</button>
             </div>
         </div>
     )
