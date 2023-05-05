@@ -1,0 +1,21 @@
+.mainDiv{
+    display: flex;
+    flex-direction: column;
+    width: 40%;
+}
+
+.date{
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+}
+
+.name{
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+}
+
+.weekend  td{
+    text-align: center;
+}

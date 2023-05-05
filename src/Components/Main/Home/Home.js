@@ -1,6 +1,7 @@
 import Footer from "../../Footer/Footer";
 import Header from "../../Header/Header";
-import Calendar from "./Calendar";
+import Calendar from "./Calendar/Calendar";
+import NextEvent from "./Calendar/NextEvent";
 
 
 
