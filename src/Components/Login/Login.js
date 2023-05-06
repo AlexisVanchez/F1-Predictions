@@ -1,6 +1,7 @@
 import classes from './Login.module.css';
 import {useEffect, useState} from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { auth } from '../../redux/firebase_config';
 
 export default function Login(){
     const [email, setEmail] = useState('');
@@ -9,29 +10,15 @@ export default function Login(){
 
     const nav = useNavigate()
 
-    function auth(email, password) {
-        const apiKey = 'AIzaSyCzDY0aSJXdh-vipPDtunDRKVt488PdEGY'
-        fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${apiKey}`, {
-            method: 'POST',
-            body: JSON.stringify({
-                email, password, returnSecureToken: true
-            }),
-            headers: { 
-                'Content-Type': 'application/json' 
-            },
-        })
-        .then(response => response.json())
-        .then(data =>{
-            console.log(data)
-            setToken(data.idToken)
-            if(data.idToken === undefined || data.idToken === 0){
-                alert('Invalid email or password')
-            }
-            else{
-                nav('/home', {replace : true})
-            }
-        })
-    }
+    async function handleLogin(email, password) {
+        try {
+          await auth.signInWithEmailAndPassword(email, password);
+          nav("/home", { replace: true });
+        } catch (error) {
+          console.error("Error during login:", error.message);
+          alert("Invalid email or password");
+        }
+      }
 
     function onChangeEmail(e){
         setEmail(e.target.value)
@@ -44,7 +31,7 @@ export default function Login(){
 
     function onSubmit(e){
         e.preventDefault()
-        auth(email, password)
+        handleLogin(email, password)
     }
 
 

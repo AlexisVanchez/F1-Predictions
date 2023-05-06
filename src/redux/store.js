@@ -1,8 +1,8 @@
+import { configureStore } from "@reduxjs/toolkit";
+import userSlice from './reducer'
 
-let store = {
-    state: {
-        event: '',
-        driver: '',
-        constructor: '',
+export default configureStore({
+    reducer:{
+        user: userSlice
     }
-}
+})
