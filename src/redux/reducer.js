@@ -3,6 +3,7 @@ import "firebase/compat/firestore";
 import { auth, firestore} from "./firebase_config";
 import firebase from "firebase/compat/app";
 
+
 const initialState = {
   user: null,
   bet: {},
@@ -32,9 +33,9 @@ export const fetchDriverStandings = () => async (dispatch) => {
     const response = await fetch("https://ergast.com/api/f1/2023/driverStandings.json");
     const data = await response.json();
     const driverStandings = data.MRData.StandingsTable.StandingsLists[0].DriverStandings;
-    for(let i = 0; i < driverStandings.length; i++) {
-      dispatch(setDriver(driverStandings[i].Driver.familyName));
-    }
+    const driverNames = driverStandings.map(driver => driver.Driver.familyName)
+      dispatch(setDriver(driverNames));
+
   } catch (error) {
     console.error("Error fetching driver standings:", error.message);
   }
@@ -45,7 +46,8 @@ export const signIn = (email, password) => async (dispatch) => {
   try{
     await auth.signInWithEmailAndPassword(email, password);
     const user = auth.currentUser;
-    dispatch(setUser({uid: user.uid, email: user.email}))
+    console.log(user);
+    dispatch(setUser({uid: user.uid, email: user.email}));
   }
   catch(error){
     console.error(error.message);

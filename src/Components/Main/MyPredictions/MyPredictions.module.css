@@ -1,0 +1,30 @@
+.mainDiv {
+    display: flex;
+    justify-content: left;
+}
+  
+form {
+    display: flex;
+    flex-direction: column;
+    width: 100px;
+    margin: 20px;
+}
+  
+.select {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin: 5px;
+}
+  
+p {
+    min-width: 20px;
+    text-align: right;
+    margin-right: 10px;
+}
+
+button  {
+    margin-top: 5px;
+    margin-left: 25px;
+}
+
