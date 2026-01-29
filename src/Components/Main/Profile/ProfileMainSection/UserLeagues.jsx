@@ -27,10 +27,10 @@ export default function UserLeagues() {
     };
 
     return (
-        <div className="bg-[#13141a]/40 backdrop-blur-md rounded-3xl p-6 border border-white/5 flex flex-col">
+        <div className="flex flex-col bg-black/30 backdrop-blur-sm p-6 border-b border-red-900/30 h-[45%]">
             <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.25em] mb-6 flex items-center">
                 <span className="w-1.5 h-4 bg-red-600 rounded-full mr-3 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
-                My Active Leagues
+                Active Leagues
             </h3>
 
             <div className="space-y-4 flex-1">

@@ -17,9 +17,10 @@ import Leagues from "./Components/Main/Leagues/Leagues";
 import Settings from "./Components/Main/Profile/Settings";
 import LastPrediction from "./Components/Main/Profile/LastPrediction";
 import UpcomingRace from "./Components/Main/Home/UpcomingRace/UpcomingRace";
+import Achievements from "./Components/Main/Profile/Achievements";
 import { useDispatch, useSelector } from "react-redux";
 import { auth } from "./redux/firebase_config";
-import { setUser } from "./redux/reducer";
+import { setUser, fetchUserProfile } from "./redux/reducer";
 
 import ProtectedRoute from "./Components/ProtectedRoute";
 
@@ -30,12 +31,8 @@ function App() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        dispatch(setUser({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL
-        }));
+        // Fetch full profile (including globalRank, points, etc.)
+        dispatch(fetchUserProfile(user.uid));
       }
     });
     return () => unsubscribe();
@@ -77,6 +74,7 @@ function App() {
             <Route path='settings' element={<Settings />}></Route>
             <Route path='last-prediction' element={<LastPrediction />}></Route>
             <Route path='upcoming-race' element={<UpcomingRace />}></Route>
+            <Route path='achievements' element={<Achievements />}></Route>
             <Route path='last-year-results' element={<LeaderboardHub year={new Date().getFullYear() - 1} />}></Route>
           </Route>
         </Routes>

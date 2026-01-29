@@ -1,6 +1,7 @@
 /**
  * Utility for calculating catchy statistics for League members.
  */
+import { calculateScore, DEFAULT_SCORING_RULES } from './scoringUtils';
 
 /**
  * Calculates fun stats for a league based on predictions and results.
@@ -8,9 +9,10 @@
  * @param {Array} members - League members [{ uid, displayName }]
  * @param {Array} allPredictions - Every prediction doc in the league [ { uid, predictions: ["VER", "NOR", ...], raceName } ]
  * @param {Object} allRaceResults - Dictionary of official results { "Monza": { results: [...] }, ... }
- * @returns {Object} - { global: { iLikeHim, weirdo }, perUser: { [uid]: { favouritePos, favouriteDriver } } }
+ * @param {Object} scoringRules - League scoring rules
+ * @returns {Object} - { global: { iLikeHim, weirdo }, perUser: { [uid]: { favouritePos, favouriteDriver, moneyMaker } } }
  */
-export const calculateLeagueFunStats = (members, allPredictions, allRaceResults) => {
+export const calculateLeagueFunStats = (members, allPredictions, allRaceResults, scoringRules = DEFAULT_SCORING_RULES) => {
     const stats = {
         global: {
             iLikeHim: null, // Most picked driver + result stats
@@ -53,8 +55,21 @@ export const calculateLeagueFunStats = (members, allPredictions, allRaceResults)
         const userBets = allPredictions.filter(p => p.uid === member.uid);
         const posFrequency = {};
         const driverFrequency = {};
+        const driverPointsEarned = {}; // { driverId: totalPoints }
 
         userBets.forEach(bet => {
+            // Calculate detailed score breakdown to get points per driver
+            const raceResult = allRaceResults[bet.raceName];
+            if (raceResult) {
+                const { breakdown } = calculateScore(bet, raceResult, scoringRules);
+                if (breakdown && breakdown.positions) {
+                    breakdown.positions.forEach(pos => {
+                        const driverId = pos.driver;
+                        driverPointsEarned[driverId] = (driverPointsEarned[driverId] || 0) + pos.points;
+                    });
+                }
+            }
+
             (bet.predictions || []).forEach((driverCode, index) => {
                 const pos = index + 1;
                 const driver = driverCode;
@@ -88,11 +103,23 @@ export const calculateLeagueFunStats = (members, allPredictions, allRaceResults)
             }
         });
 
+        // Find Most Points Driver (Money Maker)
+        let moneyMaker = null;
+        let maxPoints = -1;
+        Object.entries(driverPointsEarned).forEach(([d, pts]) => {
+            if (pts > maxPoints) {
+                maxPoints = pts;
+                moneyMaker = d;
+            }
+        });
+
         stats.perUser[member.uid] = {
             favouritePos: favPos ? `P${favPos}` : 'N/A',
             favouritePosCount: maxPosFreq,
             favouriteDriver: favDriver || 'N/A',
-            favouriteDriverCount: maxDriverFreq
+            favouriteDriverCount: maxDriverFreq,
+            moneyMaker: moneyMaker || 'N/A',
+            moneyMakerPoints: maxPoints > 0 ? maxPoints : 0
         };
     });
 

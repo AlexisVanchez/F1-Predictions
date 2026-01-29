@@ -165,7 +165,7 @@ export default function LeagueManager() {
             });
 
             // 3. Calculate Stats
-            const stats = calculateLeagueFunStats(league.members, allLeaguePredictions, raceResults);
+            const stats = calculateLeagueFunStats(league.members, allLeaguePredictions, raceResults, league.scoringSystem);
             setLeagueStats(stats);
         } catch (err) {
             console.error("Error calculating league stats:", err);
@@ -632,17 +632,17 @@ export default function LeagueManager() {
 
                         {leagueStats ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {/* iLikeHim */}
+                                {/* Benefactor (Money Maker) */}
                                 <div className="bg-gray-800/50 backdrop-blur-md border border-white/5 p-4 rounded-2xl relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-3 text-red-500/20 text-4xl group-hover:scale-110 transition pb-4">❤️</div>
-                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">"I Like Him"</p>
-                                    <h4 className="text-lg font-black italic text-red-500">
-                                        {formatDriverName(leagueStats.global.iLikeHim?.id, drivers) || 'No one yet'}
+                                    <div className="absolute top-0 right-0 p-3 text-emerald-500/20 text-4xl group-hover:scale-110 transition pb-4">💰</div>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">The Benefactor</p>
+                                    <h4 className="text-lg font-black italic text-emerald-400">
+                                        {formatDriverName(leagueStats.perUser[user.uid]?.moneyMaker, drivers) || 'No one yet'}
                                     </h4>
                                     <p className="text-[9px] text-gray-400 mt-1 leading-tight">
-                                        {leagueStats.global.iLikeHim
-                                            ? `Picked ${leagueStats.global.iLikeHim.picks} times, but only ${leagueStats.global.iLikeHim.results} Top 10s.`
-                                            : 'Most picked driver who misses the Top 10 most often.'}
+                                        {leagueStats.perUser[user.uid]?.moneyMakerPoints > 0
+                                            ? `This driver has banked you ${leagueStats.perUser[user.uid].moneyMakerPoints} points!`
+                                            : 'The driver who has earned you the most points.'}
                                     </p>
                                 </div>
 

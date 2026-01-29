@@ -47,6 +47,9 @@ export default function Sidebar() {
                 <NavLink to="/upcoming-race" className="no-underline">
                     {({ isActive }) => <NavItem label="Upcoming Race" active={isActive} />}
                 </NavLink>
+                <NavLink to="/achievements" className="no-underline">
+                    {({ isActive }) => <NavItem label="Achievements" active={isActive} icon="🏆" />}
+                </NavLink>
                 <NavLink to="/settings" className="no-underline">
                     {({ isActive }) => <NavItem label="Settings" active={isActive} icon="⚙️" />}
                 </NavLink>

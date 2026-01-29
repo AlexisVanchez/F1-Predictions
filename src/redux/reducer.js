@@ -87,7 +87,11 @@ export const fetchUserLeagues = (uid) => async (dispatch) => {
             const userDoc = await firestore.collection('users').doc(member.uid).get();
             if (userDoc.exists) {
               const userData = userDoc.data();
-              return { ...member, lastSeen: userData.lastSeen?.toMillis() || 0 }
+              return {
+                ...member,
+                lastSeen: userData.lastSeen?.toMillis() || 0,
+                photoURL: userData.photoURL || member.photoURL
+              }
             }
           } catch (e) {
             // ignore
@@ -344,6 +348,27 @@ export const fetchAndSyncRaceResult = (raceName) => async (dispatch) => {
   }
 }
 
+// Recalculate Global Ranks for all users
+export const recalculateGlobalRanks = () => async () => {
+  try {
+    console.log("Recalculating global ranks...");
+    const usersRef = firestore.collection('users');
+    const snapshot = await usersRef.orderBy('globalPoints', 'desc').get();
+
+    if (snapshot.empty) return;
+
+    const batch = firestore.batch();
+    snapshot.docs.forEach((doc, index) => {
+      batch.update(doc.ref, { globalRank: index + 1 });
+    });
+
+    await batch.commit();
+    console.log("Global ranks updated successfully");
+  } catch (error) {
+    console.error("Error recalculating global ranks:", error);
+  }
+}
+
 // Calculate Points for a League
 export const calculateLeaguePoints = (leagueId, raceName) => async (dispatch) => {
   try {
@@ -444,6 +469,10 @@ export const calculateLeaguePoints = (leagueId, raceName) => async (dispatch) =>
     });
 
     console.log("Scores updated:", memberScores);
+
+    // 5. Recalculate Global Ranks
+    await dispatch(recalculateGlobalRanks());
+
     dispatch(fetchUserLeagues(memberIds[0])); // Refresh for admin (usually caller)
     return { success: true };
 
@@ -557,7 +586,8 @@ export const signInWithGoogle = () => async (dispatch) => {
       uid: user.uid,
       email: user.email,
       displayName: user.displayName,
-      photoURL: user.photoURL
+      photoURL: user.photoURL,
+      ...userDoc.data() // Include all Firestore data (points, rank, etc.)
     }));
 
     return { success: true, isNewUser: !userDoc.exists };
@@ -592,7 +622,9 @@ export const createUserProfile = (user, additionalData = {}) => async (dispatch)
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       favoriteTeam: additionalData.favoriteTeam || null,
       predictions: [],
-      leagues: []
+      leagues: [],
+      globalPoints: 0,
+      globalRank: 0
     };
 
     await userRef.set(userProfile, { merge: true });
@@ -602,6 +634,28 @@ export const createUserProfile = (user, additionalData = {}) => async (dispatch)
   } catch (error) {
     console.error("Error creating user profile:", error.message);
     throw error;
+  }
+};
+
+// Fetch Full User Profile from Firestore
+export const fetchUserProfile = (uid) => async (dispatch) => {
+  try {
+    const userDoc = await firestore.collection('users').doc(uid).get();
+    if (userDoc.exists) {
+      const data = userDoc.data();
+      dispatch(setUser({
+        uid: uid,
+        email: data.email,
+        displayName: data.displayName,
+        photoURL: data.photoURL,
+        ...data
+      }));
+      return { success: true, data };
+    }
+    return { success: false, error: "User not found" };
+  } catch (error) {
+    console.error("Error fetching user profile:", error);
+    return { success: false, error: error.message };
   }
 };
 

@@ -10,6 +10,36 @@ export const ACH_PITSTOP_MASTER = {
     description: 'Guessed median pitstops 5 times in a row.'
 };
 
+/**
+ * Monaco Medal Achievement Definition
+ * Awarded for guessing the exact top 3 in a race.
+ */
+export const ACH_MONACO = {
+    id: 'ach_monaco',
+    name: 'Monaco GP Master',
+    icon: 'crown',
+    color: '#f87171', // Soft Red
+    description: 'Guessed the exact Top 3 (P1, P2, P3) in a race.'
+};
+
+/**
+ * Constructor Medal Achievement Mapping
+ * One medal for each team, awarded based on who brought the most points.
+ */
+export const CONSTRUCTOR_MEDALS = {
+    'Red Bull Racing': { id: 'team_red_bull', name: 'RBR Excellence', icon: 'bullseye', color: '#1e3a8a' },
+    'Mercedes': { id: 'team_mercedes', name: 'Silver Arrow', icon: 'star', color: '#6b7280' },
+    'Ferrari': { id: 'team_ferrari', name: 'Tifosi Pride', icon: 'horse', color: '#ef4444' },
+    'McLaren': { id: 'team_mclaren', name: 'Papaya Power', icon: 'shuttle-van', color: '#f97316' },
+    'Aston Martin': { id: 'team_aston', name: 'Green Racing', icon: 'leaf', color: '#065f46' },
+    'Alpine': { id: 'team_alpine', name: 'Alpine Spirit', icon: 'mountain', color: '#2563eb' },
+    'Williams': { id: 'team_williams', name: 'Williams Heritage', icon: 'flag', color: '#60a5fa' },
+    'Racing Bulls': { id: 'team_rb', name: 'Bulls Legacy', icon: 'bolt', color: '#3b82f6' },
+    'Haas F1 Team': { id: 'team_haas', name: 'Haas Hustle', icon: 'gears', color: '#71717a' },
+    'Audi': { id: 'team_audi', name: 'Audi Vorsprung', icon: 'circle-nodes', color: '#e5e7eb' },
+    'Cadillac': { id: 'team_cadillac', name: 'Cadillac V-Series', icon: 'shield-halved', color: '#facc15' }
+};
+
 export const TRACK_GROUPS = {
     POWER: {
         id: 'group_1_power',
@@ -212,7 +242,7 @@ export const ACH_CONSISTENCY = {
 
 export const ACH_CHAMPION = {
     id: 'ach_champion',
-    name: 'Champion 2026',
+    name: 'Champion of the Year',
     icon: 'trophy',
     color: '#facc15', // Yellow/Gold
     description: 'Winner of a league with 5+ contenders.'
@@ -273,28 +303,43 @@ export const calculateConsistency = (userPredictions, allRaceResults) => {
 
 /**
  * Checks for League Champion status.
+ * Returns an array of championships: [{ year, track, date }]
  */
 export const calculateChampion = (leagues, userUid) => {
-    if (!leagues || leagues.length === 0) return null;
+    if (!leagues || leagues.length === 0) return [];
+
+    const championshipsByYear = {};
 
     // Check each league
     for (const league of leagues) {
         if (league.members && league.members.length >= 5) {
-            // Check if user is #1
-            // We need standings
             const standings = league.standings || {};
             const sortedUids = Object.keys(standings).sort((a, b) => standings[b] - standings[a]);
 
             if (sortedUids.length > 0 && sortedUids[0] === userUid) {
-                return {
-                    track: league.name,
-                    score: "WINNER",
-                    date: new Date().toISOString()
-                };
+                // Determine Year
+                let year = 2026;
+                if (league.createdAt) {
+                    const dateObj = typeof league.createdAt.toDate === 'function'
+                        ? league.createdAt.toDate()
+                        : new Date(league.createdAt);
+                    year = dateObj.getFullYear();
+                }
+
+                // If multiple wins in same year, only record once (highest quality win could be added later)
+                if (!championshipsByYear[year]) {
+                    championshipsByYear[year] = {
+                        year: year,
+                        track: league.name, // The league name
+                        score: "WINNER",
+                        date: league.createdAt
+                    };
+                }
             }
         }
     }
-    return null;
+
+    return Object.values(championshipsByYear).sort((a, b) => b.year - a.year);
 };
 
 /**
@@ -322,5 +367,96 @@ export const calculatePoleKing = (userPredictions, allRaceResults) => {
             date: new Date().toISOString()
         };
     }
+    return null;
+};
+
+/**
+ * Calculates if the user has earned the Monaco Medal.
+ * Requirement: Guess the exact Top 3 in any race.
+ */
+export const calculateMonacoMedal = (userPredictions, allRaceResults) => {
+    for (const pred of userPredictions) {
+        const normalizedTrack = normalizeTrackName(pred.raceName);
+        const result = allRaceResults[normalizedTrack] || allRaceResults[pred.raceName];
+
+        if (result && result.results && pred.predictions) {
+            // Check top 3
+            const predTop3 = pred.predictions.slice(0, 3);
+            const actualTop3 = result.results.slice(0, 3).map(r => r.driverId || r.code);
+
+            const isMatch = predTop3.every((p, i) => p === actualTop3[i]);
+
+            if (isMatch) {
+                return {
+                    track: pred.raceName,
+                    score: "Top 3 Hit",
+                    date: pred.date
+                };
+            }
+        }
+    }
+    return null;
+};
+
+/**
+ * Calculates which Constructor Medal a user should receive.
+ * Requirement: The team that brought the user the most points through their drivers.
+ */
+export const calculateConstructorMedals = (userPredictions, allRaceResults, drivers) => {
+    if (!drivers || drivers.length === 0) return null;
+
+    const teamPoints = {};
+
+    userPredictions.forEach(pred => {
+        const normalizedTrack = normalizeTrackName(pred.raceName);
+        const result = allRaceResults[normalizedTrack] || allRaceResults[pred.raceName];
+
+        if (result && result.results) {
+            const { breakdown } = calculateScore(pred, result, DEFAULT_SCORING_RULES);
+
+            breakdown.positions.forEach(pos => {
+                // Find driver's team
+                const driverData = drivers.find(d =>
+                    d.code === pos.driver ||
+                    d.driver_number?.toString() === pos.driver?.toString() ||
+                    d.broadcast_name?.includes(pos.driver)
+                );
+
+                if (driverData && driverData.team_name) {
+                    let teamName = driverData.team_name;
+
+                    // Alias mapping for consistency with CONSTRUCTOR_MEDALS keys
+                    if (teamName === 'RB') teamName = 'Racing Bulls';
+                    if (teamName === 'Sauber') teamName = 'Audi';
+                    if (teamName === 'Haas') teamName = 'Haas F1 Team';
+
+                    teamPoints[teamName] = (teamPoints[teamName] || 0) + pos.points;
+                }
+            });
+        }
+    });
+
+    // Find the team with max points
+    let bestTeam = null;
+    let maxPoints = 0;
+
+    Object.entries(teamPoints).forEach(([team, points]) => {
+        if (points > maxPoints) {
+            maxPoints = points;
+            bestTeam = team;
+        }
+    });
+
+    if (bestTeam && maxPoints > 0) {
+        const medalDef = CONSTRUCTOR_MEDALS[bestTeam];
+        if (medalDef) {
+            return {
+                team: bestTeam,
+                points: maxPoints,
+                medalDef: medalDef
+            };
+        }
+    }
+
     return null;
 };
