@@ -1,0 +1,28 @@
+
+export const CIRCUIT_STATS = {
+    "Sakhir": { length: "5.412 km", record: "1:31.447 (Pedro de la Rosa, 2005)", laps: 57 },
+    "Jeddah": { length: "6.174 km", record: "1:30.734 (Lewis Hamilton, 2021)", laps: 50 },
+    "Melbourne": { length: "5.278 km", record: "1:20.260 (Charles Leclerc, 2022)", laps: 58 },
+    "Baku": { length: "6.003 km", record: "1:43.009 (Charles Leclerc, 2019)", laps: 51 },
+    "Miami": { length: "5.412 km", record: "1:29.708 (Max Verstappen, 2023)", laps: 57 },
+    "Imola": { length: "4.909 km", record: "1:15.484 (Lewis Hamilton, 2020)", laps: 63 },
+    "Monaco": { length: "3.337 km", record: "1:12.909 (Lewis Hamilton, 2021)", laps: 78 },
+    "Barcelona": { length: "4.657 km", record: "1:16.330 (Max Verstappen, 2023)", laps: 66 },
+    "Montreal": { length: "4.361 km", record: "1:13.078 (Valtteri Bottas, 2019)", laps: 70 },
+    "Spielberg": { length: "4.318 km", record: "1:05.619 (Carlos Sainz, 2020)", laps: 71 },
+    "Silverstone": { length: "5.891 km", record: "1:27.097 (Max Verstappen, 2020)", laps: 52 },
+    "Budapest": { length: "4.381 km", record: "1:16.627 (Lewis Hamilton, 2020)", laps: 70 },
+    "Spa Francorchamps": { length: "7.004 km", record: "1:46.286 (Valtteri Bottas, 2018)", laps: 44 },
+    "Zandvoort": { length: "4.259 km", record: "1:11.097 (Lewis Hamilton, 2021)", laps: 72 },
+    "Monza": { length: "5.793 km", record: "1:21.046 (Rubens Barrichello, 2004)", laps: 53 },
+    "Singapore": { length: "4.940 km", record: "1:35.867 (Lewis Hamilton, 2023)", laps: 62 },
+    "Suzuka": { length: "5.807 km", record: "1:30.983 (Lewis Hamilton, 2019)", laps: 53 },
+    "Lusail": { length: "5.419 km", record: "1:24.319 (Max Verstappen, 2023)", laps: 57 },
+    "Austin": { length: "5.513 km", record: "1:36.169 (Charles Leclerc, 2019)", laps: 56 },
+    "Mexico City": { length: "4.304 km", record: "1:17.774 (Valtteri Bottas, 2021)", laps: 71 },
+    "Sao Paulo": { length: "4.309 km", record: "1:10.540 (Valtteri Bottas, 2018)", laps: 71 },
+    "Las Vegas": { length: "6.201 km", record: "1:35.490 (Oscar Piastri, 2023)", laps: 50 },
+    "Yas Marina": { length: "5.281 km", record: "1:26.103 (Max Verstappen, 2021)", laps: 58 },
+    "Shanghai": { length: "5.451 km", record: "1:32.238 (Michael Schumacher, 2004)", laps: 56 },
+    "Madrid": { length: "5.474 km", record: "TBD", laps: 55 }
+};

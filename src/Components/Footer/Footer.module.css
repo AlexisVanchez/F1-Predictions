@@ -1,46 +1,5 @@
-.footer{
-    left:0px;
-    bottom:0px;
-    width:100%;
-    background-color:rgb(255, 6, 0);
-    width: 100%;
-    display: flex;
-    justify-content: space-around;
-    box-sizing: border-box;
-    align-items: center;
-    font-weight: 600;
-    margin-top: 24px;
-}
-
-.list{
-    list-style: none;
-    text-align: center;
-}
-
-.media{
-    margin: 10px;
-}
 
 @import url(https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css);
-
-
-.social a {
-    text-align: center;
-    width: 48px;
-    height: 48px;
-    float: left;
-    background: #fff;
-    border: 1px solid #ccc;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15), inset 0 0 50px rgba(0,0,0,0.1);
-    border-radius: 24px;
-    margin: 0 10px 10px 0;
-    padding-top: 10px;
-    color: #000;
-}
-
-.social > a > i {
-    padding: 5px;
-}
 
 .linkedin a:hover {
     background: #0077B5;

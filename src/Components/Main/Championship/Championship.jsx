@@ -8,7 +8,7 @@ export default function Championship(props){
         <div>
             <Header />
             <OverallResults />
-            <Footer />
+            {/* <Footer /> */}
         </div>
     )
 }

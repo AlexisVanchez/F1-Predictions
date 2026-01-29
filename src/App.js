@@ -1,28 +1,84 @@
-import React from "react";
+import React, { useEffect } from "react";
 import "./App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./Components/Main/Home/Home";
 import MyPredictions from "./Components/Main/MyPredictions/MyPredictions";
 import Memes from "./Components/Main/Memes/Memes";
 import Credits from "./Components/Main/Credits/Credits";
-import Championship from "./Components/Main/Championship/Championship";
+import LeaderboardHub from "./Components/Main/Championship/LeaderboardHub";
 import Stage from "./Components/Main/Championship/Results/Stage/Stage";
 import Login from "./Components/Login/Login";
 import Signup from "./Components/Login/Signup";
+import Profile from "./Components/Main/Profile/Profile";
+import GrandPrixDetail from "./Components/Main/Championship/GrandPrixDetail/GrandPrixDetail";
+import DriverDetail from "./Components/Main/Championship/DriverDetail/DriverDetail";
+import Timings from "./Components/Main/Championship/Timings/Timings";
+import Leagues from "./Components/Main/Leagues/Leagues";
+import Settings from "./Components/Main/Profile/Settings";
+import LastPrediction from "./Components/Main/Profile/LastPrediction";
+import UpcomingRace from "./Components/Main/Home/UpcomingRace/UpcomingRace";
+import { useDispatch, useSelector } from "react-redux";
+import { auth } from "./redux/firebase_config";
+import { setUser } from "./redux/reducer";
+
+import ProtectedRoute from "./Components/ProtectedRoute";
 
 function App() {
+  const dispatch = useDispatch();
+  const theme = useSelector(state => state.user.theme);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        dispatch(setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        }));
+      }
+    });
+    return () => unsubscribe();
+  }, [dispatch]);
+
+  // Apply theme to document body
+  useEffect(() => {
+    if (theme === 'light') {
+      document.body.classList.add('light-mode');
+    } else {
+      document.body.classList.remove('light-mode');
+    }
+  }, [theme]);
+
   return (
-    <div className="app">
+    <div className={`flex flex-col min-h-screen ${theme === 'light' ? 'light-mode bg-gray-50' : 'bg-[#0a0b0f]'}`}>
       <BrowserRouter>
         <Routes>
+          {/* Public Routes */}
           <Route index element={<Login />} />
           <Route path="signup" element={<Signup />} />
-          <Route path="championship" element={<Championship />} />
-          <Route path="home" element={<Home />} />
-          <Route path="my-predictions" element={<MyPredictions />} />
-          <Route path="memes" element={<Memes />} />
-          <Route path="credits" element={<Credits />} />
-          <Route path="championship/:stage" element={<Stage />} />
+
+          {/* Protected Routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="leaderboard" element={<LeaderboardHub />} />
+            <Route path="home" element={<Home />} />
+            <Route path="leagues" element={<Leagues />} />
+            <Route path="my-predictions" element={<MyPredictions />} />
+            <Route path="memes" element={<Memes />} />
+            <Route path="credits" element={<Credits />} />
+            <Route path="driver/:year/:driverId" element={<DriverDetail />} />
+            <Route path="driver/:driverId" element={<DriverDetail />} />
+            <Route path="championship/:stage" element={<Stage />} />
+            <Route path="championship/race/:year/:sessionKey" element={<GrandPrixDetail />} />
+            <Route path="championship/race/:sessionKey" element={<GrandPrixDetail />} />
+            <Route path="championship/race/:year/:sessionKey/timings" element={<Timings />} />
+            <Route path="championship/race/:sessionKey/timings" element={<Timings />} />
+            <Route path='profile' element={<Profile />}></Route>
+            <Route path='settings' element={<Settings />}></Route>
+            <Route path='last-prediction' element={<LastPrediction />}></Route>
+            <Route path='upcoming-race' element={<UpcomingRace />}></Route>
+            <Route path='last-year-results' element={<LeaderboardHub year={new Date().getFullYear() - 1} />}></Route>
+          </Route>
         </Routes>
       </BrowserRouter>
     </div>

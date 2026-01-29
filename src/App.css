@@ -1,14 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-body{
+/* Dark Mode (Default) */
+:root {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #2a2a2a;
+    --text-primary: #ffffff;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --border-color: #374151;
+    --accent-primary: #ef4444;
+    --accent-secondary: #f97316;
+    --glass-bg: rgba(26, 26, 26, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Light Mode Variables */
+.light-mode {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-tertiary: #6b7280;
+    --border-color: #e5e7eb;
+    --accent-primary: #dc2626;
+    --accent-secondary: #ea580c;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+}
+
+body {
     padding: 0;
     margin: 0 auto;
     width: 100%;
     height: 100%;
-    font-family:'Titillium Web', sans-serif;
+    font-family: 'Titillium Web', sans-serif;
     overflow: auto;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.app{
+.app {
     display: flex;
     flex-direction: column;
+}
+
+/* Global Light Mode Overrides for Tailwind Classes */
+.light-mode .bg-gray-900,
+.light-mode .bg-gray-800,
+.light-mode .bg-\[#0a0b0f\],
+.light-mode .bg-\[#13141a\],
+.light-mode .bg-\[#1a1a1a\],
+.light-mode .bg-\[#1e1f24\],
+.light-mode .bg-\[#25262c\] {
+    background-color: white !important;
+}
+
+.light-mode .bg-gray-900\/50,
+.light-mode .bg-gray-900\/40 {
+    background-color: rgba(243, 244, 246, 0.5) !important;
+}
+
+.light-mode .text-white {
+    color: #111827 !important;
+}
+
+.light-mode .text-gray-100,
+.light-mode .text-gray-200 {
+    color: #1f2937 !important;
+}
+
+.light-mode .text-gray-300 {
+    color: #374151 !important;
+}
+
+.light-mode .text-gray-400 {
+    color: #4b5563 !important;
+}
+
+.light-mode .text-gray-500 {
+    color: #6b7280 !important;
+}
+
+.light-mode .text-gray-600 {
+    color: #4b5563 !important;
+}
+
+.light-mode .border-gray-700,
+.light-mode .border-gray-800,
+.light-mode .border-white\/10,
+.light-mode .border-white\/5 {
+    border-color: #e5e7eb !important;
+}
+
+.light-mode .backdrop-blur-md {
+    background-color: rgba(255, 255, 255, 0.8) !important;
 }
