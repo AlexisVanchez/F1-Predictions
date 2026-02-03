@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
+import { firestore } from "../../../redux/firebase_config";
 import Footer from "../../Footer/Footer";
 import Header from "../../Header/Header";
 import Calendar from "./Calendar/Calendar";
@@ -9,6 +10,18 @@ import TrackTeaser from "./TrackTeaser";
 export default function Home() {
   const { schedule } = useSelector((state) => state.user);
   const [nextEvent, setNextEvent] = useState(null);
+  const [globalMsg, setGlobalMsg] = useState(null);
+
+  useEffect(() => {
+    const unsub = firestore.collection('system').doc('globals').onSnapshot(doc => {
+      if (doc.exists && doc.data().message) {
+        setGlobalMsg(doc.data().message);
+      } else {
+        setGlobalMsg(null);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (schedule && schedule.length > 0) {
@@ -24,6 +37,12 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0b0c10] text-gray-100">
       <Header />
+
+      {globalMsg && (
+        <div className="bg-gradient-to-r from-red-600 to-red-900 text-white text-center py-3 px-4 font-bold tracking-wide shadow-lg animate-pulse-slow relative z-50">
+          📢 ANNOUNCEMENT: {globalMsg}
+        </div>
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
         {/* Dynamic Hero Section */}

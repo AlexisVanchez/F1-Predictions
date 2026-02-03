@@ -302,7 +302,7 @@ export default function OverallResults(props) {
                                 const teamColor = getTeamColor(data.teamName);
 
                                 return (
-                                    <tr key={index} className="group transition-all duration-300 hover:scale-[1.01]">
+                                    <tr key={index} className="group transition-all duration-300">
                                         {/* Circuit / Flag */}
                                         <td className="px-6 py-4 bg-[#1e1f24] rounded-l-2xl border-y border-l border-white/5 group-hover:border-white/10 group-hover:bg-[#25262c] transition-all">
                                             <div className="flex items-center gap-4">

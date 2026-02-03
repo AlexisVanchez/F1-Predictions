@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
-import { createLeague, joinLeague, fetchUserLeagues, calculateLeaguePoints, updateUserStatus, searchLeagues, deleteLeague } from '../../../redux/reducer';
+import { createLeague, joinLeague, fetchUserLeagues, calculateLeaguePoints, updateUserStatus, searchLeagues, deleteLeague, fetchDriverStandings } from '../../../redux/reducer';
 import "firebase/compat/firestore";
 import { firestore } from '../../../redux/firebase_config';
 import { calculateLeagueFunStats, formatDriverName } from '../../../utils/leagueStatsUtils';
+import ScoringBreakdown from '../Common/ScoringBreakdown';
+import SeasonStandings from './SeasonStandings';
 
 export default function LeagueManager() {
     const dispatch = useDispatch();
@@ -45,27 +47,28 @@ export default function LeagueManager() {
     const [viewingMember, setViewingMember] = useState(null);
     const [memberPredictionData, setMemberPredictionData] = useState(null);
 
-    // League Stats States
+    // League Stats & History States
     const [leagueStats, setLeagueStats] = useState(null);
     const [isStatsLoading, setIsStatsLoading] = useState(false);
+    const [detailTab, setDetailTab] = useState('leaderboard'); // 'leaderboard' | 'history'
+    const [allLeaguePredictions, setAllLeaguePredictions] = useState([]);
+    const [historicalRaceResults, setHistoricalRaceResults] = useState({});
+    const [selectedHistoryRace, setSelectedHistoryRace] = useState(null);
+    const [hoveredMember, setHoveredMember] = useState(null); // For point breakdown tooltip
+    const hoverTimeoutRef = useRef(null); // For hover delay using Ref for stability
 
 
 
     useEffect(() => {
         if (user?.uid) {
             dispatch(fetchUserLeagues(user.uid));
+            if (drivers.length === 0) dispatch(fetchDriverStandings());
 
             // Initial status update
             updateUserStatus(user.uid)();
-
-            // Heartbeat every 60s
-            const interval = setInterval(() => {
-                updateUserStatus(user.uid)();
-            }, 60000);
-
-            return () => clearInterval(interval);
+            // ...
         }
-    }, [dispatch, user]);
+    }, [dispatch, user, drivers.length]);
 
     // Handle navigation from profile - auto-open league
     useEffect(() => {
@@ -167,6 +170,8 @@ export default function LeagueManager() {
             // 3. Calculate Stats
             const stats = calculateLeagueFunStats(league.members, allLeaguePredictions, raceResults, league.scoringSystem);
             setLeagueStats(stats);
+            setAllLeaguePredictions(allLeaguePredictions);
+            setHistoricalRaceResults(raceResults);
         } catch (err) {
             console.error("Error calculating league stats:", err);
         } finally {
@@ -184,25 +189,34 @@ export default function LeagueManager() {
         }
     };
 
-    const handleViewMember = async (member) => {
+    const handleViewMember = async (member, specificRace = null, context = 'history') => {
         setViewingMember(member);
         setMemberPredictionData(null);
         try {
-            // New Architecture Lookup
-            // ID: {uid}_{raceName}
-            const targetRace = targetRaceName;
-            const docId = `${member.uid}_${targetRace}`;
+            let raceName;
 
+            // Determine which race to show based on context
+            if (context === 'leaderboard') {
+                // Show next upcoming race (future only)
+                const now = new Date();
+                const upcomingRace = schedule.find(race => new Date(race.date) > now);
+                raceName = upcomingRace ? upcomingRace.raceName : targetRaceName;
+            } else {
+                // History context: show the specific race
+                raceName = specificRace || targetRaceName;
+            }
+
+            const docId = `${member.uid}_${raceName}`;
             const doc = await firestore.collection('predictions').doc(docId).get();
 
             if (doc.exists) {
-                setMemberPredictionData(doc.data());
+                setMemberPredictionData({ ...doc.data(), raceName: raceName });
             } else {
-                setMemberPredictionData({}); // Empty object indicates no prediction found
+                setMemberPredictionData({ raceName: raceName }); // Empty object indicates no prediction found
             }
         } catch (error) {
             console.error("Error fetching member bets:", error);
-            setMemberPredictionData({});
+            setMemberPredictionData({ raceName: targetRaceName });
         }
     };
 
@@ -249,56 +263,20 @@ export default function LeagueManager() {
                     <div className="bg-gray-800 rounded-xl border border-gray-700 w-full max-w-md p-6 relative shadow-2xl">
                         <button onClick={closeMemberView} className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl font-bold">✕</button>
                         <h3 className="text-xl font-bold mb-1 text-white">{viewingMember.displayName}'s Picks</h3>
-                        <p className="text-sm text-gray-400 mb-4">{targetRaceName}</p>
+                        <p className="text-sm text-gray-400 mb-4">{memberPredictionData?.raceName || targetRaceName}</p>
 
                         {memberPredictionData === null ? (
                             <p className="text-center py-4">Loading...</p>
-                        ) : !memberPredictionData.predictions || memberPredictionData.predictions.length === 0 ? (
+                        ) : !memberPredictionData.predictions ? (
                             <p className="text-center py-4 text-gray-500">No predictions found for this event.</p>
                         ) : (
-                            <div className="space-y-4">
-                                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                                    {memberPredictionData.predictions.map((driver, idx) => (
-                                        <div key={idx} className="flex items-center justify-between bg-gray-900/50 p-2 rounded border border-gray-700/50">
-                                            <span className="text-gray-500 font-mono w-6">#{idx + 1}</span>
-                                            <span className="font-bold text-gray-200">{driver}</span>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Extra Predictions Display - Show all with visual indicators */}
-                                {(memberPredictionData.pitstops !== undefined || memberPredictionData.redFlags !== undefined || memberPredictionData.safetyCarCount !== undefined) && (
-                                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-gray-700">
-                                        {memberPredictionData.pitstops !== undefined && (
-                                            <div className={`text-center p-2 bg-blue-500/10 rounded border border-blue-500/20 ${!(activeLeague?.scoringSystem?.pitstopScoring === true || activeLeague?.scoringSystem?.pitstopScoring?.enabled) ? 'opacity-40' : ''}`}>
-                                                <div className="text-[10px] text-blue-400 uppercase tracking-widest">Stops</div>
-                                                <div className="font-bold text-white">{memberPredictionData.pitstops}</div>
-                                                {!(activeLeague?.scoringSystem?.pitstopScoring === true || activeLeague?.scoringSystem?.pitstopScoring?.enabled) && (
-                                                    <div className="text-[8px] text-gray-500 mt-0.5">Not scored</div>
-                                                )}
-                                            </div>
-                                        )}
-                                        {memberPredictionData.redFlags !== undefined && (
-                                            <div className={`text-center p-2 bg-red-500/10 rounded border border-red-500/20 ${!activeLeague?.scoringSystem?.redFlag?.enabled ? 'opacity-40' : ''}`}>
-                                                <div className="text-[10px] text-red-500 uppercase tracking-widest">Red Flags</div>
-                                                <div className="font-bold text-white">{memberPredictionData.redFlags}</div>
-                                                {!activeLeague?.scoringSystem?.redFlag?.enabled && (
-                                                    <div className="text-[8px] text-gray-500 mt-0.5">Not scored</div>
-                                                )}
-                                            </div>
-                                        )}
-                                        {memberPredictionData.safetyCarCount !== undefined && (
-                                            <div className={`text-center p-2 bg-yellow-500/10 rounded border border-yellow-500/20 ${!activeLeague?.scoringSystem?.safetyCar?.enabled ? 'opacity-40' : ''}`}>
-                                                <div className="text-[10px] text-yellow-500 uppercase tracking-widest">SC</div>
-                                                <div className="font-bold text-white">{memberPredictionData.safetyCarCount}</div>
-                                                {!activeLeague?.scoringSystem?.safetyCar?.enabled && (
-                                                    <div className="text-[8px] text-gray-500 mt-0.5">Not scored</div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                            <ScoringBreakdown
+                                predictions={memberPredictionData.predictions}
+                                breakdown={memberPredictionData.leagueScores?.[activeLeague.id]?.breakdown || memberPredictionData.breakdown}
+                                officialResults={memberPredictionData.officialResults}
+                                totalScore={memberPredictionData.leagueScores?.[activeLeague.id]?.totalScore}
+                                scoringSystem={activeLeague?.scoringSystem}
+                            />
                         )}
                     </div>
                 </div>
@@ -579,48 +557,250 @@ export default function LeagueManager() {
                     </div>
 
                     <div>
-                        <h3 className="text-lg font-bold mb-3 border-b border-gray-700 pb-2">Leaderboard</h3>
-                        <p className="text-xs text-gray-500 mb-2">Click on a member to see their predictions.</p>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="text-gray-500 text-xs uppercase border-b border-gray-800">
-                                    <tr>
-                                        <th className="py-2">Rank</th>
-                                        <th className="py-2">Driver (User)</th>
-                                        <th className="py-2 text-right">Points</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="text-sm">
-                                    {activeLeague.members && [...activeLeague.members]
-                                        .sort((a, b) => ((activeLeague.standings?.[b.uid] || 0) - (activeLeague.standings?.[a.uid] || 0)))
-                                        .map((member, index) => {
-                                            const isUserOnline = (lastSeenMillis) => {
-                                                if (!lastSeenMillis) return false;
-                                                const diff = Date.now() - lastSeenMillis;
-                                                return diff < 5 * 60 * 1000; // 5 minutes threshold
-                                            }
-                                            const isOnline = isUserOnline(member.lastSeen);
-
-                                            return (
-                                                <tr
-                                                    key={member.uid}
-                                                    onClick={() => handleViewMember(member)}
-                                                    className="border-b border-gray-800 hover:bg-gray-700 cursor-pointer transition"
-                                                >
-                                                    <td className="py-3 font-mono text-gray-400">#{index + 1}</td>
-                                                    <td className="py-3 font-bold flex items-center gap-2">
-                                                        <div className={`w-2.5 h-2.5 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`} title={isOnline ? "Online" : "Offline"}></div>
-                                                        {member.displayName}
-                                                        {member.uid === activeLeague.adminUid && '👑'}
-                                                        {member.uid === user.uid && <span className="bg-red-600 text-xs px-1 rounded">YOU</span>}
-                                                    </td>
-                                                    <td className="py-3 text-right font-bold text-red-500 text-lg">{activeLeague.standings?.[member.uid] || 0}</td>
-                                                </tr>
-                                            )
-                                        })}
-                                </tbody>
-                            </table>
+                        {/* Tab Navigation */}
+                        <div className="flex border-b border-gray-800 mb-6">
+                            <button
+                                onClick={() => setDetailTab('leaderboard')}
+                                className={`px-6 py-3 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${detailTab === 'leaderboard' ? 'border-red-600 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Leaderboard
+                            </button>
+                            <button
+                                onClick={() => setDetailTab('history')}
+                                className={`px-6 py-3 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${detailTab === 'history' ? 'border-red-600 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Race History
+                            </button>
+                            <button
+                                onClick={() => setDetailTab('season')}
+                                className={`px-6 py-3 text-sm font-bold uppercase tracking-widest transition-all border-b-2 ${detailTab === 'season' ? 'border-red-600 text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                            >
+                                Season Standings
+                            </button>
                         </div>
+
+                        {detailTab === 'leaderboard' ? (
+                            <div>
+                                <h3 className="text-lg font-bold mb-3 border-b border-gray-700 pb-2">Standings</h3>
+                                <p className="text-xs text-gray-500 mb-2">Click on a member to see their current predictions.</p>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="text-gray-500 text-xs uppercase border-b border-gray-800">
+                                            <tr>
+                                                <th className="py-2">Rank</th>
+                                                <th className="py-2">User</th>
+                                                <th className="py-2 text-right">Points</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="text-sm">
+                                            {activeLeague.members && [...activeLeague.members]
+                                                .sort((a, b) => ((activeLeague.standings?.[b.uid] || 0) - (activeLeague.standings?.[a.uid] || 0)))
+                                                .map((member, index) => {
+                                                    const isUserOnline = (lastSeenMillis) => {
+                                                        if (!lastSeenMillis) return false;
+                                                        const diff = Date.now() - lastSeenMillis;
+                                                        return diff < 5 * 60 * 1000;
+                                                    };
+                                                    const isOnline = isUserOnline(member.lastSeen);
+
+                                                    return (
+                                                        <tr
+                                                            key={member.uid}
+                                                            onClick={() => handleViewMember(member, null, 'leaderboard')}
+                                                            onMouseEnter={() => {
+                                                                // Clear any existing timeout immediately
+                                                                if (hoverTimeoutRef.current) {
+                                                                    clearTimeout(hoverTimeoutRef.current);
+                                                                    hoverTimeoutRef.current = null;
+                                                                }
+                                                                setHoveredMember(member.uid);
+                                                            }}
+                                                            onMouseLeave={() => {
+                                                                // Add delay before hiding
+                                                                hoverTimeoutRef.current = setTimeout(() => {
+                                                                    setHoveredMember(null);
+                                                                }, 500); // 500ms delay
+                                                            }}
+                                                            className="border-b border-gray-800 hover:bg-gray-700 cursor-pointer transition relative"
+                                                        >
+                                                            <td className="py-3 font-mono text-gray-400">#{index + 1}</td>
+                                                            <td className="py-3 font-bold flex items-center gap-2">
+                                                                <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500'}`}></div>
+                                                                {member.displayName}
+                                                                {member.uid === activeLeague.adminUid && '👑'}
+                                                            </td>
+                                                            <td className="py-3 text-right font-bold text-red-500 text-lg relative">
+                                                                {activeLeague.standings?.[member.uid] || 0}
+
+                                                                {/* Point Breakdown Tooltip */}
+                                                                {hoveredMember === member.uid && (
+                                                                    <div
+                                                                        className="absolute right-0 top-full mt-3 bg-gradient-to-br from-gray-900 via-gray-900 to-black border-2 border-red-600/30 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] p-4 z-50 min-w-[280px] backdrop-blur-xl animate-fadeIn"
+                                                                        onMouseEnter={() => {
+                                                                            // Keep popup visible when hovering over it
+                                                                            if (hoverTimeoutRef.current) {
+                                                                                clearTimeout(hoverTimeoutRef.current);
+                                                                                hoverTimeoutRef.current = null;
+                                                                            }
+                                                                        }}
+                                                                        onMouseLeave={() => {
+                                                                            // Add delay when leaving popup
+                                                                            hoverTimeoutRef.current = setTimeout(() => {
+                                                                                setHoveredMember(null);
+                                                                            }, 500); // 500ms delay
+                                                                        }}
+                                                                    >
+                                                                        {/* Header */}
+                                                                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="w-1 h-5 bg-gradient-to-b from-red-500 to-red-700 rounded-full"></div>
+                                                                                <span className="text-xs font-black text-white uppercase tracking-widest">Point Breakdown</span>
+                                                                            </div>
+                                                                            <span className="text-xs text-gray-500 font-mono">
+                                                                                {allLeaguePredictions.filter(p => p.uid === member.uid && p.leagueScores?.[activeLeague.id]).length} races
+                                                                            </span>
+                                                                        </div>
+
+                                                                        {/* Race List */}
+                                                                        <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
+                                                                            {allLeaguePredictions
+                                                                                .filter(p => p.uid === member.uid && p.leagueScores?.[activeLeague.id])
+                                                                                .sort((a, b) => (b.leagueScores[activeLeague.id].totalScore || 0) - (a.leagueScores[activeLeague.id].totalScore || 0))
+                                                                                .map((pred, i) => {
+                                                                                    const points = pred.leagueScores[activeLeague.id].totalScore;
+                                                                                    return (
+                                                                                        <div
+                                                                                            key={i}
+                                                                                            className="flex items-center justify-between bg-white/5 hover:bg-white/10 rounded-lg px-3 py-2 transition-all group border border-white/5 hover:border-red-500/30"
+                                                                                        >
+                                                                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                                                <span className="text-[10px] font-mono text-gray-600 w-4">#{i + 1}</span>
+                                                                                                <span className="text-xs text-gray-300 truncate group-hover:text-white transition-colors">
+                                                                                                    {pred.raceName}
+                                                                                                </span>
+                                                                                            </div>
+                                                                                            <div className="flex items-center gap-2">
+                                                                                                <span className={`text-sm font-black font-mono ${points >= 20 ? 'text-green-400' :
+                                                                                                    points >= 10 ? 'text-blue-400' :
+                                                                                                        points >= 5 ? 'text-yellow-400' :
+                                                                                                            'text-gray-400'
+                                                                                                    }`}>
+                                                                                                    {points}
+                                                                                                </span>
+                                                                                                <span className="text-[10px] text-gray-600">pts</span>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    );
+                                                                                })
+                                                                            }
+                                                                            {allLeaguePredictions.filter(p => p.uid === member.uid && p.leagueScores?.[activeLeague.id]).length === 0 && (
+                                                                                <div className="text-center py-4 text-gray-600 italic text-xs">
+                                                                                    No scored races yet
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Total Footer */}
+                                                                        {allLeaguePredictions.filter(p => p.uid === member.uid && p.leagueScores?.[activeLeague.id]).length > 0 && (
+                                                                            <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between">
+                                                                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total</span>
+                                                                                <span className="text-2xl font-black text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                                                                                    {activeLeague.standings?.[member.uid] || 0}
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : detailTab === 'history' ? (
+                            <div className="space-y-4">
+                                <h3 className="text-lg font-bold mb-3 border-b border-gray-700 pb-2">Race History</h3>
+                                {(() => {
+                                    // Get all unique races that have been scored in this league
+                                    const scoredRaces = [...new Set(
+                                        allLeaguePredictions
+                                            .filter(p => p.leagueScores?.[activeLeague.id])
+                                            .map(p => p.raceName)
+                                    )];
+
+                                    // Create race objects (from schedule if available, otherwise create minimal object)
+                                    const raceObjects = scoredRaces.map(raceName => {
+                                        const scheduleRace = schedule.find(s => s.raceName === raceName);
+                                        return scheduleRace || {
+                                            raceName: raceName,
+                                            round: 0,
+                                            date: new Date().toISOString().split('T')[0]
+                                        };
+                                    });
+
+                                    // Sort by date (most recent first)
+                                    const sortedRaces = raceObjects.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                                    return sortedRaces.length > 0 ? (
+                                        sortedRaces.map((race, idx) => (
+                                            <div key={idx} className="bg-gray-800/50 border border-gray-700 rounded-xl overflow-hidden">
+                                                <div
+                                                    onClick={() => setSelectedHistoryRace(selectedHistoryRace === race.raceName ? null : race.raceName)}
+                                                    className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-700 transition"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <span className="text-xs bg-red-600 px-2 py-0.5 rounded font-bold uppercase tracking-tighter">Rd {race.round}</span>
+                                                        <h4 className="font-bold text-gray-200">{race.raceName}</h4>
+                                                    </div>
+                                                    <div className="text-gray-500">{selectedHistoryRace === race.raceName ? '▼' : '▶'}</div>
+                                                </div>
+
+                                                {selectedHistoryRace === race.raceName && (
+                                                    <div className="border-t border-gray-700 p-4 bg-gray-900/50 animate-fadeIn">
+                                                        <table className="w-full text-left text-xs">
+                                                            <thead>
+                                                                <tr className="text-gray-500 uppercase tracking-widest border-b border-gray-800">
+                                                                    <th className="py-2">Member</th>
+                                                                    <th className="py-2 text-right">Points Earned</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {activeLeague.members.map(member => {
+                                                                    const pred = allLeaguePredictions.find(p => p.uid === member.uid && p.raceName === race.raceName);
+                                                                    const pts = pred?.leagueScores?.[activeLeague.id]?.totalScore || pred?.totalScore || 0;
+                                                                    return (
+                                                                        <tr
+                                                                            key={member.uid}
+                                                                            onClick={() => handleViewMember(member, race.raceName)}
+                                                                            className="border-b border-gray-800/50 hover:bg-gray-800 cursor-pointer transition"
+                                                                        >
+                                                                            <td className="py-2 font-bold">{member.displayName}</td>
+                                                                            <td className="py-2 text-right font-black text-red-500">{pts}</td>
+                                                                        </tr>
+                                                                    );
+                                                                })}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-center py-10 text-gray-600 italic">No historical data available for this league yet.</p>
+                                    );
+                                })()}
+                            </div>
+                        ) : detailTab === 'season' ? (
+                            <div>
+                                <SeasonStandings
+                                    members={activeLeague.members}
+                                    predictions={allLeaguePredictions}
+                                    leagueId={activeLeague.id}
+                                />
+                            </div>
+                        ) : null}
                     </div>
                     {/* League Insights Section */}
                     <div className="mt-8 animate-fadeIn">
@@ -632,17 +812,17 @@ export default function LeagueManager() {
 
                         {leagueStats ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {/* Benefactor (Money Maker) */}
+                                {/* I Like Him (Most Picked) */}
                                 <div className="bg-gray-800/50 backdrop-blur-md border border-white/5 p-4 rounded-2xl relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-3 text-emerald-500/20 text-4xl group-hover:scale-110 transition pb-4">💰</div>
-                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">The Benefactor</p>
+                                    <div className="absolute top-0 right-0 p-3 text-emerald-500/20 text-4xl group-hover:scale-110 transition pb-4">❤️</div>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">"I Like Him"</p>
                                     <h4 className="text-lg font-black italic text-emerald-400">
-                                        {formatDriverName(leagueStats.perUser[user.uid]?.moneyMaker, drivers) || 'No one yet'}
+                                        {formatDriverName(leagueStats.global.iLikeHim?.id, drivers) || 'No one yet'}
                                     </h4>
                                     <p className="text-[9px] text-gray-400 mt-1 leading-tight">
-                                        {leagueStats.perUser[user.uid]?.moneyMakerPoints > 0
-                                            ? `This driver has banked you ${leagueStats.perUser[user.uid].moneyMakerPoints} points!`
-                                            : 'The driver who has earned you the most points.'}
+                                        {leagueStats.global.iLikeHim
+                                            ? `League favorite! Picked ${leagueStats.global.iLikeHim.picks} times, finished top 10 ${leagueStats.global.iLikeHim.results} times.`
+                                            : 'The most popular driver pick in this league.'}
                                     </p>
                                 </div>
 
@@ -660,31 +840,52 @@ export default function LeagueManager() {
                                     </p>
                                 </div>
 
-                                {/* User Specific: Favourite Position */}
+                                {/* The Consistency King (Most Active) */}
                                 <div className="bg-gray-800/50 backdrop-blur-md border border-white/5 p-4 rounded-2xl relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-3 text-yellow-500/20 text-4xl group-hover:scale-110 transition pb-4">🎯</div>
-                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Your Lucky Spot</p>
+                                    <div className="absolute top-0 right-0 p-3 text-yellow-500/20 text-4xl group-hover:scale-110 transition pb-4">📊</div>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">"Consistency King"</p>
                                     <h4 className="text-lg font-black italic text-yellow-500">
-                                        {leagueStats.perUser[user.uid]?.favouritePos || 'N/A'}
+                                        {(() => {
+                                            // Find member with most predictions submitted
+                                            let maxPredictions = 0;
+                                            let kingName = 'TBD';
+                                            activeLeague.members?.forEach(member => {
+                                                const predCount = allLeaguePredictions.filter(p => p.uid === member.uid).length;
+                                                if (predCount > maxPredictions) {
+                                                    maxPredictions = predCount;
+                                                    kingName = member.displayName;
+                                                }
+                                            });
+                                            return kingName;
+                                        })()}
                                     </h4>
                                     <p className="text-[9px] text-gray-400 mt-1 leading-tight">
-                                        {leagueStats.perUser[user.uid]?.favouritePosCount
-                                            ? `You've guessed this spot ${leagueStats.perUser[user.uid].favouritePosCount} times.`
-                                            : 'The position you predict most frequently.'}
+                                        Most dedicated predictor. Never misses a race!
                                     </p>
                                 </div>
 
-                                {/* User Specific: Favourite Driver */}
+                                {/* The Gambler (Most Varied) */}
                                 <div className="bg-gray-800/50 backdrop-blur-md border border-white/5 p-4 rounded-2xl relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 p-3 text-blue-500/20 text-4xl group-hover:scale-110 transition pb-4">👤</div>
-                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">Your Favorite</p>
+                                    <div className="absolute top-0 right-0 p-3 text-blue-500/20 text-4xl group-hover:scale-110 transition pb-4">🎲</div>
+                                    <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-1">"The Gambler"</p>
                                     <h4 className="text-lg font-black italic text-blue-400">
-                                        {formatDriverName(leagueStats.perUser[user.uid]?.favouriteDriver, drivers)}
+                                        {(() => {
+                                            // Find member with most unique drivers picked
+                                            let maxUnique = 0;
+                                            let gamblerName = 'TBD';
+                                            activeLeague.members?.forEach(member => {
+                                                const memberPreds = allLeaguePredictions.filter(p => p.uid === member.uid);
+                                                const uniqueDrivers = new Set(memberPreds.flatMap(p => p.predictions || []));
+                                                if (uniqueDrivers.size > maxUnique) {
+                                                    maxUnique = uniqueDrivers.size;
+                                                    gamblerName = member.displayName || 'Unknown';
+                                                }
+                                            });
+                                            return gamblerName;
+                                        })()}
                                     </h4>
                                     <p className="text-[9px] text-gray-400 mt-1 leading-tight">
-                                        {leagueStats.perUser[user.uid]?.favouriteDriverCount
-                                            ? `You've put your faith here ${leagueStats.perUser[user.uid].favouriteDriverCount} times.`
-                                            : "The driver you've put your faith in the most."}
+                                        Most diverse predictions. Keeps everyone guessing!
                                     </p>
                                 </div>
                             </div>

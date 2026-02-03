@@ -35,6 +35,7 @@ export default function Header() {
                         <NavLink to="/my-predictions" className={linkClass}>My Predictions</NavLink>
                         <NavLink to="/leaderboard" className={linkClass}>Leaderboard</NavLink>
                         <NavLink to="/credits" className={linkClass}>Credits</NavLink>
+
                     </nav>
                 </div>
 

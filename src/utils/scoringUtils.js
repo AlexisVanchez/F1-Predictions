@@ -31,24 +31,70 @@ export const calculateScore = (prediction, results, rules = DEFAULT_SCORING_RULE
     const breakdown = {
         positions: [],
         safetyCar: 0,
+        safetyCarCount: 0,
+        redFlags: 0,
         polePosition: 0,
         pitstops: 0 // New breakdown field
     };
 
+    // Normalize results if they are simple strings (Simulator/Manual input format)
+    // Support singular 'result' (Firestore) or plural 'results' (API)
+    let rawResults = results.results || results.result || [];
+    let normalizedResults = [...rawResults];
+
+    if (normalizedResults.length > 0 && typeof normalizedResults[0] === 'string') {
+        normalizedResults = normalizedResults.map((code, index) => ({
+            driverId: code,
+            code: code,
+            position: index + 1
+        }));
+    }
+
     // 1. Calculate Driving Points (Top 10)
     // We assume prediction.predictions is an array of driver codes/names in order 1-10
-    if (prediction.predictions && results.results) {
+    if (prediction.predictions && normalizedResults.length > 0) {
         prediction.predictions.slice(0, 10).forEach((predictedDriver, index) => {
             const predictedPos = index + 1;
 
+            // Helper: Extract last name from full name for better matching
+            const extractLastName = (name) => {
+                if (!name) return '';
+                const parts = name.trim().split(' ');
+                return parts.length >= 2 ? parts[parts.length - 1] : name;
+            };
+
+            // Helper: Get 3-letter code from name
+            const getDriverCode = (name) => {
+                if (!name) return '';
+                // If already a 3-letter code
+                if (name.length === 3 && name === name.toUpperCase()) return name;
+                // Extract last name and take first 3 letters
+                const lastName = extractLastName(name);
+                return lastName.substring(0, 3).toUpperCase();
+            };
+
+            const predictedCode = getDriverCode(predictedDriver);
+            const predictedLastName = extractLastName(predictedDriver).toLowerCase();
+
             // Find actual result for this driver
-            // improved matching: check code, or last name, or full string match
-            const actualResult = results.results.find(r =>
-                r.driverId === predictedDriver ||
-                r.code === predictedDriver ||
-                r.familyName?.toLowerCase() === predictedDriver.toLowerCase() ||
-                r.driverId?.toLowerCase().includes(predictedDriver.toLowerCase())
-            );
+            // Improved matching: check code, last name, or full string match
+            const actualResult = normalizedResults.find(r => {
+                const resultCode = r.driverId || r.code || '';
+                const resultLastName = (r.familyName || extractLastName(r.driverId || '')).toLowerCase();
+
+                return (
+                    // Direct code match
+                    resultCode === predictedDriver ||
+                    resultCode === predictedCode ||
+                    // Last name match
+                    resultLastName === predictedLastName ||
+                    // Full name match
+                    r.driverId?.toLowerCase() === predictedDriver.toLowerCase() ||
+                    // Partial match
+                    r.driverId?.toLowerCase().includes(predictedDriver.toLowerCase()) ||
+                    predictedDriver.toLowerCase().includes(resultCode.toLowerCase())
+                );
+            });
 
             if (actualResult) {
                 const actualPos = parseInt(actualResult.position);
@@ -69,6 +115,10 @@ export const calculateScore = (prediction, results, rules = DEFAULT_SCORING_RULE
                     } else if (diff === 2) {
                         driverPoints = 2;
                         status = "Near (+/- 2)";
+                    } else if (actualPos <= 10) {
+                        // Consolation point: predicted driver finished top 10 but too far
+                        driverPoints = 1;
+                        status = "Top 10 (Consolation)";
                     } else {
                         driverPoints = 0;
                         status = "Too far";
@@ -107,8 +157,9 @@ export const calculateScore = (prediction, results, rules = DEFAULT_SCORING_RULE
     }
 
     // 2. Safety Car (if enabled)
-    if (rules.safetyCar) {
-        // prediction.safetyCar might be "Yes"/"No" or boolean
+    // Only run legacy boolean check if safetyCar is boolean (not object)
+    if (rules.safetyCar && typeof rules.safetyCar !== 'object') {
+        // Legacy/Boolean format
         const predSC = normalizeBoolean(prediction.safetyCar);
         const actualSC = normalizeBoolean(results.safetyCar);
 
@@ -141,15 +192,6 @@ export const calculateScore = (prediction, results, rules = DEFAULT_SCORING_RULE
             if (difference === 0) {
                 // Exact match
                 points = 5;
-            } else if (actualStops >= 5 && predictedStops >= 5) {
-                // Both are 5+, give full points
-                points = 5;
-            } else if (difference === 1) {
-                // Off by 1
-                points = 3;
-            } else if (difference === 2) {
-                // Off by 2
-                points = 1;
             }
 
             if (points > 0) {
@@ -161,9 +203,23 @@ export const calculateScore = (prediction, results, rules = DEFAULT_SCORING_RULE
 
     // 5. Red Flag Count (max 3)
     if (rules.redFlag && rules.redFlag.enabled) {
-        if (prediction.redFlags !== undefined && results.redFlags !== undefined) {
-            const predictedFlags = Math.min(3, parseInt(prediction.redFlags)); // Max 3
-            const actualFlags = Math.min(3, parseInt(results.redFlags)); // Max 3
+        // Handle potential key variations (redFlags vs redFlag)
+        const predVal = prediction.redFlags !== undefined ? prediction.redFlags : prediction.redFlag;
+        const resultVal = results.redFlags !== undefined ? results.redFlags : results.redFlag;
+
+        if (predVal !== undefined && resultVal !== undefined) {
+            // Treat null as 0/undefined
+            const pVal = predVal === null ? 0 : predVal;
+            const rVal = resultVal === null ? 0 : resultVal;
+
+            const predictedFlags = Math.min(3, parseInt(pVal)); // Max 3
+            const actualFlags = Math.min(3, parseInt(rVal)); // Max 3
+
+            // DEBUG RED FLAGS
+            if (prediction.raceName && prediction.raceName.includes('Austral')) {
+                console.log(`[RedFlag Debug] Pred: ${predVal} -> ${predictedFlags}, Actual: ${resultVal} -> ${actualFlags}`);
+                console.log(`[RedFlag Debug] Match? ${predictedFlags === actualFlags}, Points: ${rules.redFlag.points}`);
+            }
 
             if (predictedFlags === actualFlags) {
                 const points = rules.redFlag.points || 0;

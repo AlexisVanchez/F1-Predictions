@@ -18,6 +18,7 @@ import Settings from "./Components/Main/Profile/Settings";
 import LastPrediction from "./Components/Main/Profile/LastPrediction";
 import UpcomingRace from "./Components/Main/Home/UpcomingRace/UpcomingRace";
 import Achievements from "./Components/Main/Profile/Achievements";
+import AdminPanel from "./Components/Admin/AdminPanel";
 import { useDispatch, useSelector } from "react-redux";
 import { auth } from "./redux/firebase_config";
 import { setUser, fetchUserProfile } from "./redux/reducer";
@@ -76,6 +77,7 @@ function App() {
             <Route path='upcoming-race' element={<UpcomingRace />}></Route>
             <Route path='achievements' element={<Achievements />}></Route>
             <Route path='last-year-results' element={<LeaderboardHub year={new Date().getFullYear() - 1} />}></Route>
+            <Route path='admin' element={<AdminPanel />}></Route>
           </Route>
         </Routes>
       </BrowserRouter>

@@ -1,5 +1,17 @@
 export const F1_2026_SCHEDULE = [
     {
+        round: 0,
+        raceName: "Test Grand Prix",
+        meeting_key: "2026_test",
+        Circuit: { circuitName: "Test Circuit", Location: { country: "Test Country", locality: "Test City" } },
+        date: "2026-01-15",
+        time: "12:00:00",
+        FirstPractice: { date: "2026-01-13", time: "10:00:00" },
+        SecondPractice: { date: "2026-01-13", time: "14:00:00" },
+        ThirdPractice: { date: "2026-01-14", time: "10:00:00" },
+        Qualifying: { date: "2026-01-14", time: "14:00:00" }
+    },
+    {
         round: 1,
         raceName: "Australian Grand Prix",
         meeting_key: "2026_au",

@@ -100,3 +100,47 @@ body {
 .light-mode .backdrop-blur-md {
     background-color: rgba(255, 255, 255, 0.8) !important;
 }
+
+/* Custom Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(239, 68, 68, 0.5);
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(239, 68, 68, 0.8);
+}
+
+/* Firefox Scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(239, 68, 68, 0.5) rgba(255, 255, 255, 0.05);
+}
+
+/* Light Mode Scrollbar */
+.light-mode ::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.light-mode ::-webkit-scrollbar-thumb {
+    background: rgba(220, 38, 38, 0.4);
+}
+
+.light-mode ::-webkit-scrollbar-thumb:hover {
+    background: rgba(220, 38, 38, 0.7);
+}
+
+.light-mode * {
+    scrollbar-color: rgba(220, 38, 38, 0.4) rgba(0, 0, 0, 0.05);
+}

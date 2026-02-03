@@ -27,6 +27,20 @@ export const calculateLeagueFunStats = (members, allPredictions, allRaceResults,
     const driverPickCounts = {}; // { driverId: count }
     const driverTop10Counts = {}; // { driverId: actualTop10count }
 
+    // Helper: Extract last name and get 3-letter code
+    const getDriverCode = (name) => {
+        if (!name) return 'UNK';
+        // If already a 3-letter code
+        if (name.length === 3 && name === name.toUpperCase()) return name;
+
+        // Extract last name
+        const parts = name.trim().split(' ');
+        const lastName = parts.length >= 2 ? parts[parts.length - 1] : name;
+
+        // Return first 3 chars of last name 
+        return lastName.substring(0, 3).toUpperCase();
+    };
+
     // 1. Initialize driverTop10Counts only from races predicted in this league
     // This makes it "Results via users only"
     Object.keys(allRaceResults).forEach(raceName => {
@@ -37,13 +51,17 @@ export const calculateLeagueFunStats = (members, allPredictions, allRaceResults,
                 // If it's the simplified ["VER", "NOR"] format
                 if (typeof resultsArray[0] === 'string') {
                     resultsArray.slice(0, 10).forEach(code => {
-                        driverTop10Counts[code] = (driverTop10Counts[code] || 0) + 1;
+                        const normalizedCode = getDriverCode(code);
+                        driverTop10Counts[normalizedCode] = (driverTop10Counts[normalizedCode] || 0) + 1;
                     });
                 } else {
                     // If it's the object format [{ driverId: 'verstappen', position: 1 }]
                     resultsArray.slice(0, 10).forEach(r => {
                         const id = r.driverId || r.code;
-                        if (id) driverTop10Counts[id] = (driverTop10Counts[id] || 0) + 1;
+                        if (id) {
+                            const normalizedCode = getDriverCode(id);
+                            driverTop10Counts[normalizedCode] = (driverTop10Counts[normalizedCode] || 0) + 1;
+                        }
                     });
                 }
             }
@@ -64,22 +82,22 @@ export const calculateLeagueFunStats = (members, allPredictions, allRaceResults,
                 const { breakdown } = calculateScore(bet, raceResult, scoringRules);
                 if (breakdown && breakdown.positions) {
                     breakdown.positions.forEach(pos => {
-                        const driverId = pos.driver;
+                        const driverId = getDriverCode(pos.driver);
                         driverPointsEarned[driverId] = (driverPointsEarned[driverId] || 0) + pos.points;
                     });
                 }
             }
 
-            (bet.predictions || []).forEach((driverCode, index) => {
+            (bet.predictions || []).forEach((driverName, index) => {
                 const pos = index + 1;
-                const driver = driverCode;
+                const driverCode = getDriverCode(driverName);
 
                 // Frequency counts
                 posFrequency[pos] = (posFrequency[pos] || 0) + 1;
-                driverFrequency[driver] = (driverFrequency[driver] || 0) + 1;
+                driverFrequency[driverCode] = (driverFrequency[driverCode] || 0) + 1;
 
                 // Global tracker
-                driverPickCounts[driver] = (driverPickCounts[driver] || 0) + 1;
+                driverPickCounts[driverCode] = (driverPickCounts[driverCode] || 0) + 1;
             });
         });
 

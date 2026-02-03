@@ -53,6 +53,13 @@ export default function Sidebar() {
                 <NavLink to="/settings" className="no-underline">
                     {({ isActive }) => <NavItem label="Settings" active={isActive} icon="⚙️" />}
                 </NavLink>
+
+                {user?.email === "daks977463@gmail.com" && (
+                    <NavLink to="/admin" className="no-underline">
+                        {({ isActive }) => <NavItem label="Admin Panel" active={isActive} icon="🛡️" />}
+                    </NavLink>
+                )}
+
                 <NavItem label="FAQ" icon="❓" />
             </div>
 

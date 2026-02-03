@@ -287,7 +287,7 @@ export const fetchAndSyncRaceResult = (raceName) => async (dispatch) => {
       const data = raceDoc.data();
       if (data.lastUpdated && (now - data.lastUpdated.toMillis()) < CACHE_DURATION) {
         console.log("Using cached race results for:", raceName);
-        return { success: true, result: data.result, status: data.status };
+        return { success: true, result: data.result, polePosition: data.polePosition, status: data.status, medianPitstops: data.medianPitstops };
       }
       raceData = data; // Keep old data in case API fails
     }
@@ -336,9 +336,9 @@ export const fetchAndSyncRaceResult = (raceName) => async (dispatch) => {
     // ... (Skipping complex OpenF1 parsing for this specific snippet to keep it robust for the User's "Test GP" main use case).
 
     return {
-      success: true, // Changing to true to simulate success for data flow 
-      result: ["VER", "LEC", "NOR"], // Placeholder results 
+      result: ["VER", "LEC", "NOR", "HAM", "SAI", "PIA", "RUS", "PER", "ALO", "HUL"], // Full Top 10 mock
       medianPitstops: medianPitstops,
+      polePosition: "VER", // Default fallback
       status: "Confirmed"
     };
 
@@ -370,7 +370,7 @@ export const recalculateGlobalRanks = () => async () => {
 }
 
 // Calculate Points for a League
-export const calculateLeaguePoints = (leagueId, raceName) => async (dispatch) => {
+export const calculateLeaguePoints = (leagueId, raceName, manualResults = null) => async (dispatch) => {
   try {
     const leagueRef = firestore.collection('leagues').doc(leagueId);
     const leagueDoc = await leagueRef.get();
@@ -383,8 +383,15 @@ export const calculateLeaguePoints = (leagueId, raceName) => async (dispatch) =>
 
     console.log(`Calculating points for ${league.name} - ${raceName}`);
 
-    // 1. Get Official Results (Synced)
-    const resultData = await dispatch(fetchAndSyncRaceResult(raceName));
+    // 1. Get Official Results (Synced or Manual)
+    let resultData;
+    if (manualResults) {
+      console.log("Using manual results for simulation...");
+      resultData = { success: true, ...manualResults };
+    } else {
+      resultData = await dispatch(fetchAndSyncRaceResult(raceName));
+    }
+
     if (!resultData.success) {
       return { success: false, error: "Could not fetch official results" };
     }
@@ -431,28 +438,34 @@ export const calculateLeaguePoints = (leagueId, raceName) => async (dispatch) =>
           scoringMode: scoring.scoringMode || 'classic'
         };
 
-        const { totalScore: leaguePoints } = calculateScore(data, formattedResults, leagueRules);
+        const { totalScore: leaguePoints, breakdown } = calculateScore(data, formattedResults, leagueRules);
         points = leaguePoints;
 
+        // Consolidate updates for this prediction document
+        const predictionUpdate = {
+          [`leagueScores.${leagueId}`]: {
+            totalScore: leaguePoints,
+            breakdown
+          },
+          officialResults: formattedResults,
+          lastScoredAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
         // B. Global Shadow Scoring (Standard Rules)
-        // Only if not already scored globally
         if (!data.globalScored) {
           console.log(`Shadow Scoring for ${uid}...`);
-          const { totalScore: standardScore } = calculateScore(data, { results: officialResult.map((driver, i) => ({ code: driver, position: i + 1 })) }, DEFAULT_SCORING_RULES);
+          const { totalScore: standardScore, breakdown: standardBreakdown } = calculateScore(data, { results: officialResult.map((driver, i) => ({ code: driver, position: i + 1 })) }, DEFAULT_SCORING_RULES);
 
-          // Increment User Global Points
-          const userUpdate = firestore.collection('users').doc(uid).update({
+          globalUpdates.push(firestore.collection('users').doc(uid).update({
             globalPoints: firebase.firestore.FieldValue.increment(standardScore)
-          });
+          }));
 
-          // Mark Prediction as Scored
-          const predUpdate = firestore.collection('predictions').doc(doc.id).update({
-            globalScored: true,
-            standardScore: standardScore
-          });
-
-          globalUpdates.push(userUpdate, predUpdate);
+          predictionUpdate.globalScored = true;
+          predictionUpdate.standardScore = standardScore;
+          predictionUpdate.standardBreakdown = standardBreakdown;
         }
+
+        globalUpdates.push(firestore.collection('predictions').doc(doc.id).update(predictionUpdate));
       }
 
       memberScores[uid] = (currentStandings[uid] || 0) + points;
@@ -502,8 +515,8 @@ const FALLBACK_DRIVERS = [
   { driver_number: 30, broadcast_name: "Liam LAWSON", team_name: "RB" },
   { driver_number: 31, broadcast_name: "Esteban OCON", team_name: "Haas" },
   { driver_number: 33, broadcast_name: "Oliver BEARMAN", team_name: "Haas" },
-  { driver_number: 27, broadcast_name: "Nico HULKENBERG", team_name: "Sauber" },
-  { driver_number: 5, broadcast_name: "Gabriel BORTOLETO", team_name: "Sauber" }
+  { driver_number: 27, broadcast_name: "Nico HULKENBERG", team_name: "Audi" },
+  { driver_number: 5, broadcast_name: "Gabriel BORTOLETO", team_name: "Audi" }
 ];
 
 export const fetchDriverStandings = () => async (dispatch) => {
@@ -815,5 +828,99 @@ export const fetchBets = (userID) => async (dispatch) => {
     console.error("Error fetching bets:", error.message);
   }
 }
+
+// --- ADMIN ACTIONS ---
+
+export const fetchAdminStats = () => async () => {
+  try {
+    // Parallel fetches for speed
+    // Note: count() is a specific server-side aggregation method in newer Firebase SDKs.
+    // If getting "function not found" errors, we might need to fallback to snapshot.size (more reads).
+    // Standard Web SDK 9 compat SHOULD support count() via aggregation queries if enabled.
+    // For safety/compatibility with older 'compat' generic usage, let's use snapshot.size for now if count fails or just use snapshots for this scale.
+
+    const [usersSnap, onlineSnap, leaguesSnap, betsSnap] = await Promise.all([
+      firestore.collection('users').get(),
+      firestore.collection('users').where('lastSeen', '>', new Date(Date.now() - 15 * 60 * 1000)).get(),
+      firestore.collection('leagues').get(),
+      firestore.collection('predictions').get()
+    ]);
+
+    return {
+      success: true,
+      totalUsers: usersSnap.size,
+      onlineUsers: onlineSnap.size,
+      totalLeagues: leaguesSnap.size,
+      totalBets: betsSnap.size
+    };
+  } catch (error) {
+    console.error("Error fetching admin stats:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const updateGlobalMessage = (message) => async () => {
+  try {
+    await firestore.collection('system').doc('globals').set({
+      message: message,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating global message:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const submitManualRaceResult = (raceName, results, polePosition = null) => async (dispatch) => {
+  try {
+    // 1. Save manual result as the "Official" result in 'races' collection
+    await firestore.collection('races').doc(raceName).set({
+      result: results, // Array of driver codes, e.g. ["VER", "LEC"]
+      polePosition: polePosition,
+      status: "Final (Manual)",
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    // 2. Trigger calculation for ALL leagues that have valid members
+    // Warning: This is a heavy operation for a client. 
+    const leaguesSnap = await firestore.collection('leagues').get();
+    console.log(`Triggering scoring for ${leaguesSnap.size} leagues...`);
+
+    // Serial execution to avoid rate limits / freezing
+    for (const doc of leaguesSnap.docs) {
+      await dispatch(calculateLeaguePoints(doc.id, raceName, { result: results, polePosition }));
+    }
+
+    return { success: true, leaguesUpdated: leaguesSnap.size };
+
+  } catch (error) {
+    console.error("Error submitting manual result:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+export const adminSearchUsers = (query) => async () => {
+  try {
+    // Try Email first
+    let snapshot = await firestore.collection('users').where('email', '==', query).get();
+
+    if (snapshot.empty) {
+      // Try DisplayName (Prefix)
+      snapshot = await firestore.collection('users')
+        .where('displayName', '>=', query)
+        .where('displayName', '<=', query + '\uf8ff')
+        .limit(10)
+        .get();
+    }
+
+    const users = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
+    return { success: true, users };
+
+  } catch (error) {
+    console.error("Admin search failed:", error);
+    return { success: false, error: error.message };
+  }
+};
 
 export default userSlice.reducer;

@@ -48,10 +48,10 @@ export const TRACK_GROUPS = {
         color: '#ff3e3e', // Red/Orange for Power
         description: 'Dominated by engine power + aero efficiency.',
         tracks: [
-            'Monza',
-            'Spa-Francorchamps',
-            'Silverstone',
-            'Jeddah'
+            'Italy - Monza',
+            'Belgium - Spa-Francorchamps',
+            'Great Britain - Silverstone',
+            'Saudi Arabia - Jeddah'
         ]
     },
     STREET: {
@@ -61,12 +61,13 @@ export const TRACK_GROUPS = {
         color: '#9d00ff', // Purple for Street/Night
         description: 'Walls, bumps, low grip, rapid track evolution.',
         tracks: [
-            'Monaco',
-            'Singapore',
-            'Baku',
-            'Miami',
-            'Las Vegas',
-            'Madrid'
+            'Monaco - Monte Carlo',
+            'Singapore - Marina Bay',
+            'Azerbaijan - Baku',
+            'USA - Miami',
+            'USA - Las Vegas',
+            'Spain - Madrid',
+            'China - Shanghai'
         ]
     },
     BALANCE: {
@@ -81,7 +82,9 @@ export const TRACK_GROUPS = {
             'Canada',
             'Austria',
             'Qatar', // "Qatar (Lusail)" -> simplified matching usually better
-            'Mexico'
+            'Mexico',
+            'Australia'
+
         ]
     },
     PRECISION: {
@@ -91,12 +94,12 @@ export const TRACK_GROUPS = {
         color: '#00ff88', // Green for precision/flow
         description: 'Narrow performance windows, punish over-driving.',
         tracks: [
-            'Suzuka',
-            'Hungaroring',
-            'Zandvoort',
-            'Imola',
-            'Portimão',
-            'Brazil' // "Brazil (Interlagos)"
+            'Japan - Suzuka',
+            'Hungary - Hungaroring',
+            'Netherlands - Zandvoort',
+            'Italy - Imola',
+            'Portugal - Portimão',
+            'Brazil - Interlagos'
         ]
     }
 };
@@ -127,6 +130,9 @@ export const normalizeTrackName = (name) => {
     if (n.includes('qatar') || n.includes('lusail')) return 'Qatar';
     if (n.includes('mexico')) return 'Mexico';
 
+    if (n.includes('australia') || n.includes('melbourne')) return 'Australia';
+    if (n.includes('china') || n.includes('shanghai')) return 'China';
+
     if (n.includes('suzuka') || n.includes('japan')) return 'Suzuka';
     if (n.includes('hungary') || n.includes('hungaroring')) return 'Hungaroring';
     if (n.includes('zandvoort') || n.includes('dutch')) return 'Zandvoort';
@@ -146,7 +152,7 @@ export const normalizeTrackName = (name) => {
  *                                  For simplicity in this app, we might pass an array of results found so far.
  * @returns {Object|null} - The best prediction result { track, score, date, ... } or null
  */
-export const calculateGroupBest = (groupKey, userPredictions, allRaceResults) => {
+export const calculateGroupBest = (groupKey, userPredictions, allRaceResults, scoringRules = DEFAULT_SCORING_RULES) => {
     const group = TRACK_GROUPS[groupKey];
     if (!group) return null;
 
@@ -170,7 +176,7 @@ export const calculateGroupBest = (groupKey, userPredictions, allRaceResults) =>
 
         if (officialResult) {
             // Calculate Score
-            const { totalScore } = calculateScore(pred, officialResult, DEFAULT_SCORING_RULES);
+            const { totalScore } = calculateScore(pred, officialResult, scoringRules);
 
             // Check if this is the best score so far for this group
             if (!bestPerformance || totalScore > bestPerformance.score) {
@@ -262,7 +268,7 @@ export const ACH_POLE_KING = {
  * Calculates consistency achievement.
  * Returns achievement object if last 5 predictions have score variance <= 3.
  */
-export const calculateConsistency = (userPredictions, allRaceResults) => {
+export const calculateConsistency = (userPredictions, allRaceResults, scoringRules = DEFAULT_SCORING_RULES) => {
     if (userPredictions.length < 5) return null;
 
     // 1. Sort by date ascending to check chronological streaks
@@ -275,7 +281,7 @@ export const calculateConsistency = (userPredictions, allRaceResults) => {
         const officialResult = allRaceResults[normalizedTrack] || allRaceResults[pred.raceName];
 
         if (officialResult) {
-            const { totalScore } = calculateScore(pred, officialResult, DEFAULT_SCORING_RULES);
+            const { totalScore } = calculateScore(pred, officialResult, scoringRules);
             predictionScores.push({ ...pred, totalScore });
         }
     }
@@ -402,7 +408,7 @@ export const calculateMonacoMedal = (userPredictions, allRaceResults) => {
  * Calculates which Constructor Medal a user should receive.
  * Requirement: The team that brought the user the most points through their drivers.
  */
-export const calculateConstructorMedals = (userPredictions, allRaceResults, drivers) => {
+export const calculateConstructorMedals = (userPredictions, allRaceResults, drivers, scoringRules = DEFAULT_SCORING_RULES) => {
     if (!drivers || drivers.length === 0) return null;
 
     const teamPoints = {};
@@ -412,15 +418,24 @@ export const calculateConstructorMedals = (userPredictions, allRaceResults, driv
         const result = allRaceResults[normalizedTrack] || allRaceResults[pred.raceName];
 
         if (result && result.results) {
-            const { breakdown } = calculateScore(pred, result, DEFAULT_SCORING_RULES);
+            const { breakdown } = calculateScore(pred, result, scoringRules);
 
             breakdown.positions.forEach(pos => {
-                // Find driver's team
-                const driverData = drivers.find(d =>
-                    d.code === pos.driver ||
-                    d.driver_number?.toString() === pos.driver?.toString() ||
-                    d.broadcast_name?.includes(pos.driver)
-                );
+                // Find driver's team (case-insensitive matching)
+                const driverName = pos.driver?.toUpperCase() || '';
+                const driverData = drivers.find(d => {
+                    const broadcastName = d.broadcast_name?.toUpperCase() || '';
+                    const driverNum = d.driver_number?.toString() || '';
+                    const code = d.code?.toUpperCase() || '';
+
+                    return (
+                        code === driverName ||
+                        driverNum === driverName ||
+                        broadcastName === driverName ||
+                        broadcastName.includes(driverName) ||
+                        driverName.includes(broadcastName.split(' ').pop()) // Match by last name
+                    );
+                });
 
                 if (driverData && driverData.team_name) {
                     let teamName = driverData.team_name;
