@@ -198,5 +198,5 @@ export const formatDriverName = (code, drivers = []) => {
         (d.broadcast_name?.includes(code)) ||
         (d.name_acronym === code)
     );
-    return driver ? driver.broadcast_name : code;
+    return driver ? (driver.broadcast_name || driver.name_acronym || code) : code;
 };

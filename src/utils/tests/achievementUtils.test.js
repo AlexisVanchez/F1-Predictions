@@ -58,6 +58,14 @@ describe('achievementUtils', () => {
             expect(normalizeTrackName(null)).toBe('');
             expect(normalizeTrackName(undefined)).toBe('');
         });
+
+        it('should normalize "Chinese Grand Prix" to "China"', () => {
+            expect(normalizeTrackName('Chinese Grand Prix')).toBe('China');
+        });
+
+        it('should normalize "Canadian Grand Prix" to "Canada"', () => {
+            expect(normalizeTrackName('Canadian Grand Prix')).toBe('Canada');
+        });
     });
 
     // ============================================
@@ -383,6 +391,64 @@ describe('achievementUtils', () => {
             const medal = calculateConstructorMedals(predictions, results, []);
 
             expect(medal).toBeNull();
+        });
+    });
+    // ============================================
+    // 9. ERROR HANDLING & EDGE CASES
+    // ============================================
+    describe('Error Handling', () => {
+        it('calculatePitstopStreak should handle non-numeric pitstop strings', () => {
+            const predictions = [{ raceName: 'R1', pitstops: '2', date: '2026-01-01' }];
+            const results = { 'R1': { medianPitstops: 2 } };
+            // Should not crash, but might not count if strict equality used without parsing
+            // The implementation uses parseInt, so '2' == 2 should work
+            const streak = calculatePitstopStreak(predictions, results);
+            expect(streak).toBeNull(); // Less than 5
+        });
+
+        it('calculatePitstopStreak should handle NaN gracefully', () => {
+            const predictions = [{ raceName: 'R1', pitstops: 'NaN', date: '2026-01-01' }];
+            const results = { 'R1': { medianPitstops: 2 } };
+
+            const streak = calculatePitstopStreak(predictions, results);
+            expect(streak).toBeNull();
+        });
+
+        it('calculateChampion should handle string dates for createdAt', () => {
+            const leagues = [{
+                name: 'Old League',
+                members: [{ uid: 'u1' }, { uid: 'u2' }, { uid: 'u3' }, { uid: 'u4' }, { uid: 'u5' }],
+                standings: { u1: 100 },
+                createdAt: '2025-01-01T00:00:00Z' // String instead of Date object
+            }];
+
+            const champs = calculateChampion(leagues, 'u1');
+            expect(champs).toHaveLength(1);
+            expect(champs[0].year).toBe(2025);
+        });
+
+        it('calculateConstructorMedals should handle partial data', () => {
+            const predictions = [{ raceName: 'Test GP', predictions: ['VER'] }];
+            const results = { 'Test GP': { results: [{ driverId: 'VER', position: 1 }] } };
+
+            // No drivers list provided -> should return null
+            expect(calculateConstructorMedals(predictions, results, null)).toBeNull();
+            expect(calculateConstructorMedals(predictions, results, [])).toBeNull();
+        });
+
+        it('should classify China as Power group', () => {
+            const predictions = [{ raceName: 'China', predictions: ['VER'], date: '2026-01-01' }];
+            const results = { 'China': { results: [{ driverId: 'VER', position: 1 }] } };
+
+            const powerBest = calculateGroupBest('POWER', predictions, results);
+            const streetBest = calculateGroupBest('STREET', predictions, results);
+
+            // China moved to POWER group
+            expect(powerBest).not.toBeNull();
+            expect(powerBest.group).toBe('Power');
+
+            // Should NOT be in Street
+            expect(streetBest).toBeNull();
         });
     });
 });

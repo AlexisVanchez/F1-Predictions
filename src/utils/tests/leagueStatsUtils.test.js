@@ -122,4 +122,50 @@ describe('leagueStatsUtils', () => {
             expect(formatDriverName('VER', [])).toBe('VER');
         });
     });
+    // ============================================
+    // 3. ERROR HANDLING & EDGE CASES
+    // ============================================
+    describe('Error Handling', () => {
+        it('should handle malformed race results gracefully', () => {
+            const malformedResults = {
+                'Test GP': { nothing: [] }, // Missing results array
+                'Test GP 2': null // Null result
+            };
+
+            const stats = calculateLeagueFunStats(
+                [{ uid: 'u1', displayName: 'User' }],
+                [{ uid: 'u1', raceName: 'Test GP', predictions: ['VER'] }],
+                malformedResults
+            );
+
+            expect(stats).toBeDefined();
+            expect(stats.global).toBeDefined();
+        });
+
+        it('should handle predictions with missing fields', () => {
+            const brokenPredictions = [
+                { uid: 'u1' }, // Missing raceName and predictions
+                { uid: 'u1', raceName: 'GP' } // Missing predictions
+            ];
+
+            const stats = calculateLeagueFunStats(
+                [{ uid: 'u1', displayName: 'User' }],
+                brokenPredictions,
+                {}
+            );
+
+            expect(stats.perUser['u1']).toBeDefined();
+        });
+
+        it('formatDriverName should handle incomplete driver objects', () => {
+            const badDrivers = [
+                {}, // Empty object
+                { broadcast_name: 'Just Name' }, // Missing numbers/code
+                { driver_number: 99 } // Missing name
+            ];
+
+            expect(formatDriverName('UNK', badDrivers)).toBe('UNK');
+            expect(formatDriverName('99', badDrivers)).toBe('99'); // Fallback to code if name missing
+        });
+    });
 });

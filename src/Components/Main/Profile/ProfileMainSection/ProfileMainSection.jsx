@@ -117,22 +117,36 @@ export default function ProfileMainSection() {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/5 blur-3xl rounded-full"></div>
                     <h3 className="text-xs font-black text-red-500 uppercase tracking-[0.2em] mb-6 relative z-10">Earned Achievements</h3>
                     <div className="flex flex-wrap gap-6 justify-around md:justify-start relative z-10">
-                        {/* Dynamic Group Achievements */}
-                        {Object.keys(TRACK_GROUPS).map(key => {
-                            const group = TRACK_GROUPS[key];
-                            const data = achievements[key];
-                            if (!data) return null;
-                            return (
-                                <Medal
-                                    key={key}
-                                    title={group.name}
-                                    icon={group.icon}
-                                    color={group.color}
-                                    desc={`${data.track} - ${data.score} pts`}
-                                    isSpecial={key === 'POWER'}
-                                />
-                            );
-                        })}
+                        {/* Best Track Achievement - Only show the single best one */}
+                        {(() => {
+                            const trackKeys = Object.keys(TRACK_GROUPS);
+                            const earnedTracks = trackKeys
+                                .map(key => ({
+                                    key,
+                                    data: achievements[key],
+                                    score: achievements[key]?.score || 0
+                                }))
+                                .filter(item => item.data);
+
+                            // Find and show only the best one
+                            if (earnedTracks.length > 0) {
+                                earnedTracks.sort((a, b) => b.score - a.score);
+                                const best = earnedTracks[0];
+                                const group = TRACK_GROUPS[best.key];
+
+                                return (
+                                    <Medal
+                                        key={best.key}
+                                        title={group.name}
+                                        icon={group.icon}
+                                        color={group.color}
+                                        desc={`${best.data.track} - ${best.data.score} pts`}
+                                        isSpecial={true}
+                                    />
+                                );
+                            }
+                            return null;
+                        })()}
 
                         {achievements['PITSTOP_MASTER'] && (
                             <Medal

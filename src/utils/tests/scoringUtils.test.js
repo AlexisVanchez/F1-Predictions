@@ -1,4 +1,4 @@
-import { calculateScore, DEFAULT_SCORING_RULES } from '../scoringUtils';
+import { calculateScore, DEFAULT_SCORING_RULES, BADGE_SCORING_RULES } from '../scoringUtils';
 
 describe('scoringUtils - calculateScore', () => {
     // --- TEST DATA ---
@@ -28,21 +28,22 @@ describe('scoringUtils - calculateScore', () => {
     };
 
     // ============================================
-    // 1. CLASSIC MODE - EXACT MATCHES
+    // 1. DEFAULT MODE (RADIUS ERROR) - EXACT MATCHES
     // ============================================
-    describe('Classic Mode - Exact Position Matches', () => {
-        it('should give 10 points for exact P1 match', () => {
+    describe('Default Mode (Radius Error) - Exact Position Matches', () => {
+        // DEFAULT_SCORING_RULES now uses radius mode
+        it('should give 10 points (Bullseye) for exact P1 match', () => {
             const prediction = { predictions: ['VER'] };
             const results = { results: [{ driverId: 'VER', position: 1 }] };
 
             const { totalScore, breakdown } = calculateScore(prediction, results);
 
             expect(breakdown.positions[0].points).toBe(10);
-            expect(breakdown.positions[0].status).toBe('Exact Match');
+            expect(breakdown.positions[0].status).toBe('Bullseye (Exact)');
             expect(totalScore).toBe(10);
         });
 
-        it('should give 9 points for exact P2 match', () => {
+        it('should give 10 points (Bullseye) for exact P2 match', () => {
             const prediction = { predictions: ['X', 'NOR'] };
             const results = {
                 results: [
@@ -53,38 +54,38 @@ describe('scoringUtils - calculateScore', () => {
 
             const { breakdown } = calculateScore(prediction, results);
 
-            expect(breakdown.positions[1].points).toBe(9);
-            expect(breakdown.positions[1].status).toBe('Exact Match');
+            expect(breakdown.positions[1].points).toBe(10); // Radius mode: exact = 10
+            expect(breakdown.positions[1].status).toBe('Bullseye (Exact)');
         });
 
-        it('should give perfect score (55 pts) for all 10 exact matches', () => {
-            // P1=10, P2=9, P3=8, P4=7, P5=6, P6=5, P7=4, P8=3, P9=2, P10=1 = 55
+        it('should give perfect score (100 pts) for all 10 exact matches in radius mode', () => {
+            // Radius mode: 10 exact matches = 10 * 10 = 100 pts
             const { totalScore, breakdown } = calculateScore(mockPrediction, mockResults);
 
             const positionPoints = breakdown.positions.reduce((sum, p) => sum + p.points, 0);
-            expect(positionPoints).toBe(55);
-            expect(totalScore).toBe(55); // No bonus features enabled by default
+            expect(positionPoints).toBe(100); // 10 drivers * 10 pts each
+            expect(totalScore).toBe(100); // No bonus features enabled by default
         });
     });
 
     // ============================================
-    // 2. TOP 10 BONUS (WRONG POSITION, BUT IN TOP 10)
+    // 2. RADIUS MODE - CLOSE PREDICTIONS
     // ============================================
-    describe('Classic Mode - Top 10 Bonus', () => {
-        it('should give 1 bonus point if predicted P1 finishes P3', () => {
+    describe('Default Mode (Radius Error) - Close Predictions', () => {
+        it('should give 2 points for +2 position error (predicted P1, actual P3)', () => {
             const prediction = { predictions: ['VER'] }; // Predicted VER P1
             const results = {
                 results: [
                     { driverId: 'NOR', position: 1 },
                     { driverId: 'LEC', position: 2 },
-                    { driverId: 'VER', position: 3 } // VER actually P3
+                    { driverId: 'VER', position: 3 } // VER actually P3, diff=2
                 ]
             };
 
             const { breakdown } = calculateScore(prediction, results);
 
-            expect(breakdown.positions[0].points).toBe(1); // top10Bonus
-            expect(breakdown.positions[0].status).toBe('Top 10 Bonus');
+            expect(breakdown.positions[0].points).toBe(2); // Near (+/- 2)
+            expect(breakdown.positions[0].status).toBe('Near (+/- 2)');
         });
 
         it('should give 0 points if predicted driver finishes outside Top 10', () => {
@@ -99,7 +100,7 @@ describe('scoringUtils - calculateScore', () => {
             const { breakdown } = calculateScore(prediction, results);
 
             expect(breakdown.positions[0].points).toBe(0);
-            expect(breakdown.positions[0].status).toBe('Miss');
+            expect(breakdown.positions[0].status).toBe('Too far'); // Radius mode status
         });
 
         it('should give 0 points if predicted driver DNFs', () => {
@@ -344,9 +345,9 @@ describe('scoringUtils - calculateScore', () => {
 
             const { totalScore, breakdown } = calculateScore(prediction, results, fullRules);
 
-            // Position points
+            // Position points (radius mode: exact = 10 each)
             const posPoints = breakdown.positions.reduce((s, p) => s + p.points, 0);
-            expect(posPoints).toBe(27); // 10+9+8
+            expect(posPoints).toBe(30); // 10+10+10 (radius mode)
 
             // Bonus points
             expect(breakdown.pitstops).toBe(5);
@@ -354,7 +355,7 @@ describe('scoringUtils - calculateScore', () => {
             expect(breakdown.safetyCarCount).toBe(5);
 
             // Total
-            expect(totalScore).toBe(42); // 27 + 5 + 5 + 5
+            expect(totalScore).toBe(45); // 30 (radius mode) + 5 + 5 + 5
         });
     });
 
@@ -368,7 +369,7 @@ describe('scoringUtils - calculateScore', () => {
 
             const { breakdown } = calculateScore(prediction, results);
 
-            expect(breakdown.positions[0].status).toBe('Exact Match');
+            expect(breakdown.positions[0].status).toBe('Bullseye (Exact)'); // Radius mode
         });
 
         it('should match case-insensitively', () => {
@@ -377,7 +378,7 @@ describe('scoringUtils - calculateScore', () => {
 
             const { breakdown } = calculateScore(prediction, results);
 
-            expect(breakdown.positions[0].status).toBe('Exact Match');
+            expect(breakdown.positions[0].status).toBe('Bullseye (Exact)'); // Radius mode
         });
 
         it('should handle simplified result format (array of strings)', () => {
@@ -386,8 +387,74 @@ describe('scoringUtils - calculateScore', () => {
 
             const { breakdown } = calculateScore(prediction, results);
 
-            expect(breakdown.positions[0].status).toBe('Exact Match');
-            expect(breakdown.positions[1].status).toBe('Exact Match');
+            expect(breakdown.positions[0].status).toBe('Bullseye (Exact)'); // Radius mode
+            expect(breakdown.positions[1].status).toBe('Bullseye (Exact)'); // Radius mode
+        });
+    });
+
+    // ============================================
+    // 9. BADGE SCORING RULES (POSITION-ONLY)
+    // ============================================
+    describe('BADGE_SCORING_RULES - Position Points Only', () => {
+        it('should use radius error mode', () => {
+            const prediction = { predictions: ['VER'] };
+            const results = { results: [{ driverId: 'VER', position: 1 }] };
+
+            const { breakdown } = calculateScore(prediction, results, BADGE_SCORING_RULES);
+
+            expect(breakdown.positions[0].points).toBe(10);
+            expect(breakdown.positions[0].status).toBe('Bullseye (Exact)');
+        });
+
+        it('should NOT award points for pitstops (disabled)', () => {
+            const prediction = { predictions: [], pitstops: 2 };
+            const results = { results: [], medianPitstops: 2 };
+
+            const { breakdown } = calculateScore(prediction, results, BADGE_SCORING_RULES);
+
+            expect(breakdown.pitstops).toBe(0); // Disabled
+        });
+
+        it('should NOT award points for red flags (disabled)', () => {
+            const prediction = { predictions: [], redFlags: 1 };
+            const results = { results: [], redFlags: 1 };
+
+            const { breakdown } = calculateScore(prediction, results, BADGE_SCORING_RULES);
+
+            expect(breakdown.redFlags).toBe(0); // Disabled
+        });
+
+        it('should NOT award points for safety car count (disabled)', () => {
+            const prediction = { predictions: [], safetyCarCount: 2 };
+            const results = { results: [], safetyCarCount: 2 };
+
+            const { breakdown } = calculateScore(prediction, results, BADGE_SCORING_RULES);
+
+            expect(breakdown.safetyCarCount || 0).toBe(0); // Disabled
+        });
+
+        it('should only count position points in total score', () => {
+            const prediction = {
+                predictions: ['VER', 'NOR', 'LEC'], // 3 exact: 10+10+10 = 30
+                pitstops: 2,
+                redFlags: 0,
+                safetyCarCount: 1
+            };
+
+            const results = {
+                results: [
+                    { driverId: 'VER', position: 1 },
+                    { driverId: 'NOR', position: 2 },
+                    { driverId: 'LEC', position: 3 }
+                ],
+                medianPitstops: 2,    // Would match but disabled
+                redFlags: 0,          // Would match but disabled
+                safetyCarCount: 1     // Would match but disabled
+            };
+
+            const { totalScore } = calculateScore(prediction, results, BADGE_SCORING_RULES);
+
+            expect(totalScore).toBe(30); // Only position points, no bonuses
         });
     });
 });

@@ -51,7 +51,8 @@ export const TRACK_GROUPS = {
             'Italy - Monza',
             'Belgium - Spa-Francorchamps',
             'Great Britain - Silverstone',
-            'Saudi Arabia - Jeddah'
+            'Saudi Arabia - Jeddah',
+            'China - Shanghai'
         ]
     },
     STREET: {
@@ -66,8 +67,7 @@ export const TRACK_GROUPS = {
             'Azerbaijan - Baku',
             'USA - Miami',
             'USA - Las Vegas',
-            'Spain - Madrid',
-            'China - Shanghai'
+            'Spain - Madrid'
         ]
     },
     BALANCE: {
@@ -125,13 +125,13 @@ export const normalizeTrackName = (name) => {
 
     if (n.includes('bahrain')) return 'Bahrain';
     if (n.includes('dhabi')) return 'Abu Dhabi';
-    if (n.includes('canada') || n.includes('montreal')) return 'Canada';
+    if (n.includes('canada') || n.includes('montreal') || n.includes('canadian')) return 'Canada';
     if (n.includes('austria')) return 'Austria';
     if (n.includes('qatar') || n.includes('lusail')) return 'Qatar';
     if (n.includes('mexico')) return 'Mexico';
 
     if (n.includes('australia') || n.includes('melbourne')) return 'Australia';
-    if (n.includes('china') || n.includes('shanghai')) return 'China';
+    if (n.includes('china') || n.includes('shanghai') || n.includes('chinese')) return 'China';
 
     if (n.includes('suzuka') || n.includes('japan')) return 'Suzuka';
     if (n.includes('hungary') || n.includes('hungaroring')) return 'Hungaroring';

@@ -19,7 +19,7 @@ import {
     calculateConstructorMedals,
     normalizeTrackName
 } from "../utils/achievementUtils";
-import { calculateScore, DEFAULT_SCORING_RULES } from "../utils/scoringUtils";
+import { calculateScore, DEFAULT_SCORING_RULES, BADGE_SCORING_RULES } from "../utils/scoringUtils";
 
 /**
  * Converts league's scoringSystem format to the format expected by calculateScore
@@ -134,34 +134,26 @@ export default function useAchievements() {
         };
 
         loadResults();
+
     }, [bet]);
 
     useEffect(() => {
+        if (!bet || !raceResults) return;
+
         const userBets = bet?.bet || [];
         const computedAchievements = {};
 
-        // Use the user's first league's scoring rules (or default if no leagues)
-        // This ensures achievements use the same rules as their main league
-        const primaryLeague = leagues?.[0];
-        const rawScoringSystem = primaryLeague?.scoringSystem;
-        const scoringRules = convertLeagueScoringToCalculateScoreFormat(rawScoringSystem);
+        // Use BADGE_SCORING_RULES for badge calculations (position points only)
+        // This excludes Safety Car, Pole Position, Pitstops, Red Flags, etc.
+        const scoringRules = BADGE_SCORING_RULES;
 
         // 1. Calculate best for each group
-        let bestGroupAchievement = null;
         Object.keys(TRACK_GROUPS).forEach(key => {
             const best = calculateGroupBest(key, userBets, raceResults, scoringRules);
             if (best) {
-                // If we don't have a best yet, or this one is higher score
-                if (!bestGroupAchievement || best.score > bestGroupAchievement.score) {
-                    bestGroupAchievement = { ...best, key }; // Add key for reference
-                }
+                computedAchievements[key] = best;
             }
         });
-
-        // 2. Add ONLY the best group achievement
-        if (bestGroupAchievement) {
-            computedAchievements[bestGroupAchievement.key] = bestGroupAchievement;
-        }
 
         const pitstopStreak = calculatePitstopStreak(userBets, raceResults);
         if (pitstopStreak) computedAchievements['PITSTOP_MASTER'] = pitstopStreak;
@@ -169,8 +161,8 @@ export default function useAchievements() {
         const consistency = calculateConsistency(userBets, raceResults, scoringRules);
         if (consistency) computedAchievements['CONSISTENCY'] = consistency;
 
-        const champion = calculateChampion(leagues, user?.uid);
-        if (champion) computedAchievements['CHAMPION'] = champion;
+        const championWins = calculateChampion(leagues, user.uid);
+        if (championWins.length > 0) computedAchievements['CHAMPION'] = championWins;
 
         const poleKing = calculatePoleKing(userBets, raceResults);
         if (poleKing) computedAchievements['POLE_KING'] = poleKing;
@@ -185,33 +177,22 @@ export default function useAchievements() {
         setLoading(false);
     }, [bet, raceResults, leagues, user, drivers]);
 
-    // DEBUG: Log achievement calculations for Australia GP
-    useEffect(() => {
-        const ausPred = bet?.bet?.find(b => b.raceName?.includes('Australia'));
-        const ausResult = raceResults['Australian Grand Prix'] || raceResults['Australia'];
-        if (ausPred && ausResult && leagues?.[0]) {
-            const rules = convertLeagueScoringToCalculateScoreFormat(leagues[0].scoringSystem);
-            const { totalScore, breakdown } = calculateScore(ausPred, ausResult, rules);
-            console.log('[Achievement Debug] Australia Prediction:', ausPred);
-            console.log('[Achievement Debug] Australia Result:', ausResult);
-            console.log('[Achievement Debug] Australia Breakdown:', breakdown);
-            console.log('[Achievement Debug] Australia Total:', totalScore);
-            console.log('[Achievement Debug] Australia Rules:', rules);
-        }
-    }, [bet, raceResults, leagues]);
-
-    // DEBUG: Log achievement calculations for Japanese GP
     useEffect(() => {
         const japanPred = bet?.bet?.find(b => b.raceName?.includes('Japan'));
         const japanResult = raceResults['Japanese Grand Prix'] || raceResults['Japan'];
         if (japanPred && japanResult && leagues?.[0]) {
             const scoringRules = convertLeagueScoringToCalculateScoreFormat(leagues[0].scoringSystem);
             const { totalScore, breakdown } = calculateScore(japanPred, japanResult, scoringRules);
-            console.log('[Achievement Debug] Japan GP Prediction:', japanPred);
-            console.log('[Achievement Debug] Japan GP Result:', japanResult);
-            console.log('[Achievement Debug] Japan GP Breakdown:', breakdown);
-            console.log('[Achievement Debug] Japan GP Total:', totalScore);
-            console.log('[Achievement Debug] Scoring Rules (converted):', scoringRules);
+        }
+    }, [bet, raceResults, leagues]);
+
+    useEffect(() => {
+        const chinaPred = bet?.bet?.find(b => b.raceName?.includes('China') || b.raceName?.includes('Shanghai'));
+        const chinaResult = raceResults['Chinese Grand Prix'] || raceResults['China'];
+
+        if (chinaPred && chinaResult && leagues?.[0]) {
+            const scoringRules = convertLeagueScoringToCalculateScoreFormat(leagues[0].scoringSystem);
+            const { totalScore, breakdown } = calculateScore(chinaPred, chinaResult, scoringRules);
         }
     }, [bet, raceResults, leagues]);
 

@@ -41,21 +41,42 @@ export default function Achievements() {
 
                     {/* Section: Track Mastery */}
                     <AchievementSection title="Track Mastery" description="Master different styles of circuits to prove your versatility.">
-                        {Object.keys(TRACK_GROUPS).map(key => {
-                            const group = TRACK_GROUPS[key];
-                            const data = achievements[key];
-                            return (
-                                <Medal
-                                    key={key}
-                                    title={group.name}
-                                    icon={group.icon}
-                                    color={group.color}
-                                    desc={data ? `${data.track}: ${data.score} pts` : group.description}
-                                    isSpecial={key === 'POWER'}
-                                    locked={!data}
-                                />
-                            );
-                        })}
+                        {(() => {
+                            // Find the best track group achievement
+                            const trackKeys = Object.keys(TRACK_GROUPS);
+                            const trackAchievements = trackKeys
+                                .map(key => ({
+                                    key,
+                                    score: achievements[key]?.score || 0
+                                }))
+                                .filter(item => item.score > 0);
+
+                            // Find the key with the highest score
+                            let bestKey = null;
+                            if (trackAchievements.length > 0) {
+                                trackAchievements.sort((a, b) => b.score - a.score);
+                                bestKey = trackAchievements[0].key;
+                            }
+
+                            // Display all badges, highlight the best one
+                            return trackKeys.map(key => {
+                                const group = TRACK_GROUPS[key];
+                                const data = achievements[key];
+                                const isBest = key === bestKey;
+
+                                return (
+                                    <Medal
+                                        key={key}
+                                        title={group.name}
+                                        icon={group.icon}
+                                        color={group.color}
+                                        desc={data ? `${data.track}: ${data.score} pts` : group.description}
+                                        isSpecial={isBest} // Highlight the best one
+                                        locked={!data}
+                                    />
+                                );
+                            });
+                        })()}
                     </AchievementSection>
 
                     {/* Section: Special Feats */}

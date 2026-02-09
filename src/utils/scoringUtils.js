@@ -1,21 +1,28 @@
 export const DEFAULT_SCORING_RULES = {
+    scoringMode: 'radius', // Radius error system as default
     exactMatch: {
-        1: 10, // P1
-        2: 9,  // P2
-        3: 8,  // P3
-        4: 7,  // P4
-        5: 6,  // P5
-        6: 5,  // P6
-        7: 4,  // P7
-        8: 3,  // P8
-        9: 2,  // P9
-        10: 1  // P10
+        1: 10, 2: 9, 3: 8, 4: 7, 5: 6, 6: 5, 7: 4, 8: 3, 9: 2, 10: 1
     },
-    top10Bonus: 1, // Points if in top 10 but not exact match (unless exact match is 0)
-    safetyCar: false, // Default off
-    safetyCarPoints: 5,
-    polePosition: false, // Default off
-    polePositionPoints: 5
+    top10Bonus: 1, // Consolation point for top 10
+    // All bonuses disabled by default
+    safetyCar: false,
+    polePosition: false,
+    pitstopScoring: false,
+    redFlag: { enabled: false }
+};
+
+export const BADGE_SCORING_RULES = {
+    scoringMode: 'radius', // Use radius error system
+    exactMatch: {
+        1: 10, 2: 9, 3: 8, 4: 7, 5: 6, 6: 5, 7: 4, 8: 3, 9: 2, 10: 1
+    },
+    top10Bonus: 1,
+    // Disable all bonus categories
+    safetyCar: false,
+    polePosition: false,
+    pitstopScoring: false,
+    redFlag: { enabled: false },
+    fastestLap: false
 };
 
 /**
@@ -214,12 +221,6 @@ export const calculateScore = (prediction, results, rules = DEFAULT_SCORING_RULE
 
             const predictedFlags = Math.min(3, parseInt(pVal)); // Max 3
             const actualFlags = Math.min(3, parseInt(rVal)); // Max 3
-
-            // DEBUG RED FLAGS
-            if (prediction.raceName && prediction.raceName.includes('Austral')) {
-                console.log(`[RedFlag Debug] Pred: ${predVal} -> ${predictedFlags}, Actual: ${resultVal} -> ${actualFlags}`);
-                console.log(`[RedFlag Debug] Match? ${predictedFlags === actualFlags}, Points: ${rules.redFlag.points}`);
-            }
 
             if (predictedFlags === actualFlags) {
                 const points = rules.redFlag.points || 0;
