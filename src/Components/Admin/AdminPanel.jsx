@@ -9,12 +9,12 @@ import BroadcastControl from "./BroadcastControl";
 import UserInspector from "./UserInspector";
 import Simulator from "./Simulator";
 
+const ADMIN_EMAILS = ["daks977463@gmail.com", "vserv777@gmail.com"];
+
 export default function AdminPanel() {
     const user = useSelector(state => state.user.user);
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("dashboard");
-
-    const ADMIN_EMAILS = ["daks977463@gmail.com", "vserv777@gmail.com"];
 
     // Security Check
     useEffect(() => {
