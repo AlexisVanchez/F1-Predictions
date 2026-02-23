@@ -8,8 +8,7 @@ import RaceControl from "./RaceControl";
 import BroadcastControl from "./BroadcastControl";
 import UserInspector from "./UserInspector";
 import Simulator from "./Simulator";
-
-const ADMIN_EMAILS = ["daks977463@gmail.com", "vserv777@gmail.com"];
+import { ADMIN_EMAILS } from "../../config/adminConfig";
 
 export default function AdminPanel() {
     const user = useSelector(state => state.user.user);

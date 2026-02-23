@@ -1,6 +1,7 @@
 import { useSelector, useDispatch } from "react-redux";
 import { NavLink, useNavigate } from "react-router-dom";
 import { signOut } from "../../../redux/reducer";
+import { ADMIN_EMAILS } from "../../../config/adminConfig";
 
 export default function Sidebar() {
     const user = useSelector(state => state.user.user);
@@ -54,7 +55,7 @@ export default function Sidebar() {
                     {({ isActive }) => <NavItem label="Settings" active={isActive} icon="⚙️" />}
                 </NavLink>
 
-                {user?.email === "daks977463@gmail.com" && (
+                {ADMIN_EMAILS.includes(user?.email) && (
                     <NavLink to="/admin" className="no-underline">
                         {({ isActive }) => <NavItem label="Admin Panel" active={isActive} icon="🛡️" />}
                     </NavLink>
