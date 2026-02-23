@@ -76,7 +76,7 @@ export const fetchUserLeagues = (uid) => async (dispatch) => {
 
       // Enhance members with status ("online" | "offline") logic
       // We fetch the latest user doc for each member to get 'lastSeen'
-      const memberIds = leagueData.memberIds || [];
+      // memberIds is used directly from leagueData.memberIds in the members map below
       const membersWithStatus = await Promise.all(
         (leagueData.members || []).map(async (member) => {
           // Try to find matching user doc for status
@@ -280,9 +280,6 @@ export const fetchAndSyncRaceResult = (raceName) => async (dispatch) => {
     const now = Date.now();
     const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-    // eslint-disable-next-line no-unused-vars
-    let raceData = null;
-
     // 1. Check Cache
     if (raceDoc.exists) {
       const data = raceDoc.data();
@@ -290,7 +287,6 @@ export const fetchAndSyncRaceResult = (raceName) => async (dispatch) => {
         console.log("Using cached race results for:", raceName);
         return { success: true, result: data.result, polePosition: data.polePosition, status: data.status, medianPitstops: data.medianPitstops };
       }
-      raceData = data; // Keep old data in case API fails
     }
 
     // 2. Fetch from OpenF1 (if stale or missing)

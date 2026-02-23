@@ -26,8 +26,6 @@ export default function Timings() {
 
             const isRoundNumber = parseInt(sessionKey) < 100;
             let currentDriversMap = {};
-            // eslint-disable-next-line no-unused-vars
-            let currentSessionName = '';
 
             if (!isRoundNumber) {
                 // TRY OPENF1 FIRST
@@ -37,7 +35,6 @@ export default function Timings() {
                     const sessionData = await sessionRes.json();
                     if (sessionData && sessionData[0]) {
                         setSessionName(sessionData[0].session_name);
-                        currentSessionName = sessionData[0].session_name;
                     }
 
                     const driversRes = await fetch(`https://api.openf1.org/v1/drivers?session_key=${sessionKey}`);
