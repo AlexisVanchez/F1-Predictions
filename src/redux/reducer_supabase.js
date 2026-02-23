@@ -7,6 +7,7 @@ import { F1_2026_SCHEDULE } from "../Components/Main/Home/Calendar/f1_2026_stati
 
 const initialState = {
     user: null,
+    authLoading: true, // true while we resolve the initial session
     bet: {},
     drivers: [],
     leagues: [],
@@ -24,10 +25,15 @@ const userSlice = createSlice({
             state.drivers = action.payload;
         },
         setUser: (state, action) => {
-            state.user = action.payload
+            state.user = action.payload;
+            state.authLoading = false;
+        },
+        setAuthLoading: (state, action) => {
+            state.authLoading = action.payload;
         },
         clearUser: (state) => {
             state.user = null;
+            state.authLoading = false;
             state.bet = {};
             state.leagues = [];
         },
@@ -57,7 +63,7 @@ const userSlice = createSlice({
     }
 })
 
-export const { setUser, clearUser, setBet, setDriver, setSchedule, setLeagues, setScheduleLoading, setScheduleError, setTheme } = userSlice.actions;
+export const { setUser, setAuthLoading, clearUser, setBet, setDriver, setSchedule, setLeagues, setScheduleLoading, setScheduleError, setTheme } = userSlice.actions;
 
 // --- AUTHENTICATION ACTIONS ---
 
@@ -96,16 +102,15 @@ export const signOut = () => async (dispatch) => {
     }
 };
 
-// Fetch Full User Profile from Supabase
-export const fetchUserProfile = (uid) => async (dispatch) => {
+// Fetch Full User Profile from Supabase, creating a row for new OAuth users if needed
+export const fetchUserProfile = (uid, authUser = null) => async (dispatch) => {
     try {
+        // First try to fetch the existing profile
         const { data, error } = await supabase
             .from('users')
             .select('*')
             .eq('id', uid)
             .single();
-
-        if (error) throw error;
 
         if (data) {
             dispatch(setUser({
@@ -117,9 +122,41 @@ export const fetchUserProfile = (uid) => async (dispatch) => {
             }));
             return { success: true, data };
         }
-        return { success: false, error: "User not found" };
+
+        // Profile doesn't exist yet (new OAuth user, no DB trigger) – create it
+        if (error && error.code === 'PGRST116') {
+            const meta = authUser?.user_metadata || {};
+            const { data: newData, error: upsertError } = await supabase
+                .from('users')
+                .upsert({
+                    id: uid,
+                    email: authUser?.email || '',
+                    display_name: meta.full_name || meta.display_name || meta.name || 'F1 Fan',
+                    photo_url: meta.avatar_url || meta.picture || '',
+                    global_points: 0,
+                    global_rank: 0
+                }, { onConflict: 'id' })
+                .select()
+                .single();
+
+            if (upsertError) throw upsertError;
+
+            dispatch(setUser({
+                uid: newData.id,
+                email: newData.email,
+                displayName: newData.display_name,
+                photoURL: newData.photo_url,
+                ...newData
+            }));
+            return { success: true, data: newData };
+        }
+
+        if (error) throw error;
+        return { success: false, error: 'User not found' };
     } catch (error) {
-        console.error("Error fetching user profile:", error);
+        console.error('Error fetching user profile:', error);
+        // Don't leave auth in limbo – clear loading so the route guard can react
+        dispatch(setAuthLoading(false));
         return { success: false, error: error.message };
     }
 };

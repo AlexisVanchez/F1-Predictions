@@ -14,14 +14,16 @@ export default function AdminPanel() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState("dashboard");
 
+    const ADMIN_EMAILS = ["daks977463@gmail.com", "vserv777@gmail.com"];
+
     // Security Check
     useEffect(() => {
-        if (!user || user.email !== "daks977463@gmail.com") {
+        if (!user || !ADMIN_EMAILS.includes(user.email)) {
             navigate("/home");
         }
     }, [user, navigate]);
 
-    if (!user || user.email !== "daks977463@gmail.com") return null;
+    if (!user || !ADMIN_EMAILS.includes(user.email)) return null;
 
     return (
         <div className="min-h-screen bg-[#0b0c10] text-white font-sans">

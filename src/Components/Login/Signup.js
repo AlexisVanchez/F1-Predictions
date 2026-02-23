@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
-import { signInWithGoogle, setUser } from '../../redux/reducer_supabase';
+import { signInWithGoogle } from '../../redux/reducer_supabase';
 import { useDispatch, useSelector } from 'react-redux';
 
 export default function Signup() {
@@ -13,37 +13,22 @@ export default function Signup() {
     const nav = useNavigate();
 
     useEffect(() => {
-        // Check active session
+        // If already authenticated, go straight to home
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session?.user) {
-                console.log("User authenticated:", session.user);
-                dispatch(setUser({
-                    uid: session.user.id,
-                    email: session.user.email,
-                    displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.display_name,
-                    photoURL: session.user.user_metadata?.avatar_url
-                }));
-                nav("/home", { replace: true });
+                nav('/home', { replace: true });
             }
         });
 
+        // Handle OAuth callback arriving on this page
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session?.user) {
-                console.log("User authenticated status change:", session.user);
-                dispatch(setUser({
-                    uid: session.user.id,
-                    email: session.user.email,
-                    displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.display_name,
-                    photoURL: session.user.user_metadata?.avatar_url
-                }));
-                nav("/home", { replace: true });
+                nav('/home', { replace: true });
             }
         });
 
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [dispatch, nav]);
+        return () => subscription.unsubscribe();
+    }, [nav]);
 
     async function handleGoogleSignUp() {
         try {

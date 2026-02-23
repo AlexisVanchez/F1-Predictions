@@ -21,7 +21,7 @@ import Achievements from "./Components/Main/Profile/Achievements";
 import AdminPanel from "./Components/Admin/AdminPanel";
 import { useDispatch, useSelector } from "react-redux";
 import { supabase } from "./config/supabase";
-import { fetchUserProfile, setUser } from "./redux/reducer_supabase";
+import { fetchUserProfile, setUser, setAuthLoading } from "./redux/reducer_supabase";
 
 import ProtectedRoute from "./Components/ProtectedRoute";
 
@@ -30,16 +30,18 @@ function App() {
   const theme = useSelector(state => state.user.theme);
 
   useEffect(() => {
-    // Check active session
+    // Check active session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        dispatch(fetchUserProfile(session.user.id));
+        dispatch(fetchUserProfile(session.user.id, session.user));
+      } else {
+        dispatch(setAuthLoading(false));
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        dispatch(fetchUserProfile(session.user.id));
+        dispatch(fetchUserProfile(session.user.id, session.user));
       } else {
         dispatch(setUser(null));
       }
