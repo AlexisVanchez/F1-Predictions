@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../../redux/firebase_config';
-import { signInWithGoogle } from '../../redux/reducer';
+import { supabase } from '../../config/supabase';
+import { signInWithGoogle, setUser } from '../../redux/reducer_supabase';
 import { useDispatch, useSelector } from 'react-redux';
-import { setUser } from "../../redux/reducer";
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
@@ -13,21 +12,35 @@ export default function Login() {
   const nav = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        console.log("User authenticated:", user);
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        console.log("User authenticated:", session.user);
         dispatch(setUser({
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          photoURL: user.photoURL
+          uid: session.user.id,
+          email: session.user.email,
+          displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.display_name,
+          photoURL: session.user.user_metadata?.avatar_url
+        }));
+        nav("/home", { replace: true });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        console.log("User authenticated status change:", session.user);
+        dispatch(setUser({
+          uid: session.user.id,
+          email: session.user.email,
+          displayName: session.user.user_metadata?.full_name || session.user.user_metadata?.display_name,
+          photoURL: session.user.user_metadata?.avatar_url
         }));
         nav("/home", { replace: true });
       }
     });
 
     return () => {
-      unsubscribe();
+      subscription.unsubscribe();
     };
   }, [dispatch, nav]);
 

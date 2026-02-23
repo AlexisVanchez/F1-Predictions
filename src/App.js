@@ -20,8 +20,8 @@ import UpcomingRace from "./Components/Main/Home/UpcomingRace/UpcomingRace";
 import Achievements from "./Components/Main/Profile/Achievements";
 import AdminPanel from "./Components/Admin/AdminPanel";
 import { useDispatch, useSelector } from "react-redux";
-import { auth } from "./redux/firebase_config";
-import { setUser, fetchUserProfile } from "./redux/reducer";
+import { supabase } from "./config/supabase";
+import { fetchUserProfile, setUser } from "./redux/reducer_supabase";
 
 import ProtectedRoute from "./Components/ProtectedRoute";
 
@@ -30,13 +30,22 @@ function App() {
   const theme = useSelector(state => state.user.theme);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        // Fetch full profile (including globalRank, points, etc.)
-        dispatch(fetchUserProfile(user.uid));
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        dispatch(fetchUserProfile(session.user.id));
       }
     });
-    return () => unsubscribe();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        dispatch(fetchUserProfile(session.user.id));
+      } else {
+        dispatch(setUser(null));
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [dispatch]);
 
   // Apply theme to document body

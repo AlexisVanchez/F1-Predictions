@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { firestore } from "../redux/firebase_config";
-import { fetchDriverStandings } from "../redux/reducer";
+import { supabase } from "../config/supabase";
+import { fetchDriverStandings } from "../redux/reducer_supabase";
 import {
     TRACK_GROUPS,
     ACH_PITSTOP_MASTER,
@@ -105,22 +105,28 @@ export default function useAchievements() {
             const newResults = {};
             const uniqueRaces = [...new Set(userBets.map(b => b.raceName))];
 
-            // Read directly from Firestore 'races' collection (where Simulator saves results)
+            // Read directly from Supabase 'races' table
             // This avoids hitting the OpenF1 API which causes 429 errors
             for (const raceName of uniqueRaces) {
                 if (raceResults[raceName]) continue;
 
                 try {
-                    const raceDoc = await firestore.collection('races').doc(raceName).get();
-                    if (raceDoc.exists) {
-                        const data = raceDoc.data();
+                    const { data, error } = await supabase
+                        .from('races')
+                        .select('*')
+                        .eq('race_name', raceName)
+                        .single();
+
+                    if (data) {
                         newResults[raceName] = {
                             result: data.result,
                             results: data.result, // Alias for compatibility
-                            polePosition: data.polePosition,
-                            medianPitstops: data.medianPitstops,
+                            polePosition: data.pole_position, // Note: snake_case in DB
+                            medianPitstops: data.median_pitstops, // Note: snake_case in DB
                             status: data.status
                         };
+                    } else if (error && error.code !== 'PGRST116') { // Ignore "no rows found" error
+                        console.error(`Error loading race result for ${raceName}:`, error);
                     }
                 } catch (error) {
                     console.error(`Error loading race result for ${raceName}:`, error);

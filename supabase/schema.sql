@@ -1,12 +1,8 @@
 -- F1 Predictions Database Schema for Supabase
--- Run this in your Supabase SQL Editor: https://app.supabase.com/project/_/sql
+-- Run this in your Supabase SQL Editor
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- ============================================================================
--- TABLES
--- ============================================================================
 
 -- Users table (integrates with Supabase Auth)
 CREATE TABLE IF NOT EXISTS users (
@@ -80,10 +76,7 @@ CREATE TABLE IF NOT EXISTS system_config (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ============================================================================
--- INDEXES
--- ============================================================================
-
+-- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_users_global_points ON users(global_points DESC);
 CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen);
 CREATE INDEX IF NOT EXISTS idx_league_members_user ON league_members(user_id);
@@ -93,10 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_predictions_race ON predictions(race_name);
 CREATE INDEX IF NOT EXISTS idx_predictions_season ON predictions(season);
 CREATE INDEX IF NOT EXISTS idx_leagues_invite_code ON leagues(invite_code);
 
--- ============================================================================
--- ROW LEVEL SECURITY (RLS)
--- ============================================================================
-
+-- Enable Row Level Security (RLS)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE leagues ENABLE ROW LEVEL SECURITY;
 ALTER TABLE league_members ENABLE ROW LEVEL SECURITY;
@@ -104,83 +94,62 @@ ALTER TABLE predictions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE races ENABLE ROW LEVEL SECURITY;
 ALTER TABLE system_config ENABLE ROW LEVEL SECURITY;
 
--- Users policies
-DROP POLICY IF EXISTS "Users can view all profiles" ON users;
+-- RLS Policies for users table
 CREATE POLICY "Users can view all profiles" ON users
   FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can update own profile" ON users;
 CREATE POLICY "Users can update own profile" ON users
   FOR UPDATE USING (auth.uid() = id);
 
-DROP POLICY IF EXISTS "Users can insert own profile" ON users;
 CREATE POLICY "Users can insert own profile" ON users
   FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Leagues policies
-DROP POLICY IF EXISTS "Anyone can view leagues" ON leagues;
+-- RLS Policies for leagues table
 CREATE POLICY "Anyone can view leagues" ON leagues
   FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Authenticated users can create leagues" ON leagues;
 CREATE POLICY "Authenticated users can create leagues" ON leagues
   FOR INSERT WITH CHECK (auth.uid() = admin_uid);
 
-DROP POLICY IF EXISTS "Admin can update own leagues" ON leagues;
 CREATE POLICY "Admin can update own leagues" ON leagues
   FOR UPDATE USING (auth.uid() = admin_uid);
 
-DROP POLICY IF EXISTS "Admin can delete own leagues" ON leagues;
 CREATE POLICY "Admin can delete own leagues" ON leagues
   FOR DELETE USING (auth.uid() = admin_uid);
 
--- League members policies
-DROP POLICY IF EXISTS "Anyone can view league members" ON league_members;
+-- RLS Policies for league_members table
 CREATE POLICY "Anyone can view league members" ON league_members
   FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can join leagues" ON league_members;
 CREATE POLICY "Users can join leagues" ON league_members
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can leave leagues" ON league_members;
 CREATE POLICY "Users can leave leagues" ON league_members
   FOR DELETE USING (auth.uid() = user_id);
 
--- Predictions policies
-DROP POLICY IF EXISTS "Users can view all predictions" ON predictions;
+-- RLS Policies for predictions table
 CREATE POLICY "Users can view all predictions" ON predictions
   FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Users can create own predictions" ON predictions;
 CREATE POLICY "Users can create own predictions" ON predictions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can update own predictions" ON predictions;
 CREATE POLICY "Users can update own predictions" ON predictions
   FOR UPDATE USING (auth.uid() = user_id);
 
-DROP POLICY IF EXISTS "Users can delete own predictions" ON predictions;
 CREATE POLICY "Users can delete own predictions" ON predictions
   FOR DELETE USING (auth.uid() = user_id);
 
--- Races policies
-DROP POLICY IF EXISTS "Anyone can view race results" ON races;
+-- RLS Policies for races table
 CREATE POLICY "Anyone can view race results" ON races
   FOR SELECT USING (true);
 
-DROP POLICY IF EXISTS "Authenticated users can update races" ON races;
-CREATE POLICY "Authenticated users can update races" ON races
+CREATE POLICY "Only authenticated users can update races" ON races
   FOR ALL USING (auth.uid() IS NOT NULL);
 
--- System config policies
-DROP POLICY IF EXISTS "Anyone can view system config" ON system_config;
+-- RLS Policies for system_config table
 CREATE POLICY "Anyone can view system config" ON system_config
   FOR SELECT USING (true);
-
--- ============================================================================
--- FUNCTIONS & TRIGGERS
--- ============================================================================
 
 -- Function to automatically create user profile on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()
@@ -204,10 +173,16 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- ============================================================================
--- COMMENTS
--- ============================================================================
+-- Function to update last_seen timestamp
+CREATE OR REPLACE FUNCTION public.update_last_seen()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.last_seen = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
+-- Comments for documentation
 COMMENT ON TABLE users IS 'User profiles with global statistics';
 COMMENT ON TABLE leagues IS 'User-created prediction leagues';
 COMMENT ON TABLE league_members IS 'Junction table for league membership';

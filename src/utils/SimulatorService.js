@@ -1,37 +1,41 @@
-import { firestore } from "../redux/firebase_config";
-import firebase from "firebase/compat/app";
+import { supabase } from "../config/supabase";
 
 /**
- * SimulatorService provides utilities for seeding test data.
+ * SimulatorService provides utilities for seeding test data in Supabase.
  */
 export const SimulatorService = {
     /**
-     * Seeds mock users into Firestore.
+     * Seeds mock users into Supabase.
      * @param {number} count - Number of users to seed.
      */
     seedMockUsers: async (count = 10) => {
-        const batch = firestore.batch();
         const mockUsers = [];
 
         for (let i = 1; i <= count; i++) {
             const uid = `mock_user_${i}_${Math.random().toString(36).substring(7)}`;
-            const userRef = firestore.collection('users').doc(uid);
             const userData = {
-                uid,
+                id: uid,
                 email: `tester${i}@example.com`,
-                displayName: `Mock Racer ${i}`,
-                photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                globalPoints: 0,
-                globalRank: 0,
-                isMock: true
+                display_name: `Mock Racer ${i}`,
+                photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
+                global_points: 0,
+                global_rank: 0,
+                is_mock: true
             };
-            batch.set(userRef, userData);
             mockUsers.push(userData);
         }
 
-        await batch.commit();
-        return mockUsers;
+        const { data, error } = await supabase
+            .from('users')
+            .insert(mockUsers)
+            .select();
+
+        if (error) {
+            console.error("Error seeding mock users:", error);
+            throw error;
+        }
+
+        return data;
     },
 
     /**
@@ -41,30 +45,34 @@ export const SimulatorService = {
      * @param {Array} driverPool - List of available driver codes (e.g., ["VER", "HAM", ...]).
      */
     generateMockPredictions: async (userIds, raceName, driverPool) => {
-        const batch = firestore.batch();
-
-        userIds.forEach(uid => {
+        const predictions = userIds.map(uid => {
             // Shuffle driver pool and take top 10
             const shuffled = [...driverPool].sort(() => 0.5 - Math.random());
-            const predictions = shuffled.slice(0, 10);
+            const predictionList = shuffled.slice(0, 10);
 
-            const docId = `${uid}_${raceName}`;
-            const predictionRef = firestore.collection('predictions').doc(docId);
-
-            batch.set(predictionRef, {
-                uid,
-                raceName,
-                predictions,
+            return {
+                user_id: uid,
+                race_name: raceName,
+                predictions: predictionList,
                 pitstops: Math.floor(Math.random() * 4) + 1, // 1-4
-                redFlags: Math.floor(Math.random() * 2), // 0-1
-                safetyCarCount: Math.floor(Math.random() * 3), // 0-2
-                date: firebase.firestore.FieldValue.serverTimestamp(),
+                red_flags: Math.floor(Math.random() * 2), // 0-1
+                safety_car_count: Math.floor(Math.random() * 3), // 0-2
                 season: "2026",
-                isMock: true
-            });
+                is_mock: true
+            };
         });
 
-        await batch.commit();
+        const { data, error } = await supabase
+            .from('predictions')
+            .insert(predictions)
+            .select();
+
+        if (error) {
+            console.error("Error generating mock predictions:", error);
+            throw error;
+        }
+
+        return data;
     },
 
     /**
@@ -73,44 +81,60 @@ export const SimulatorService = {
      * @param {string} leagueId - The league ID to join.
      */
     joinMockUsersToLeague: async (userIds, leagueId) => {
-        const leagueRef = firestore.collection('leagues').doc(leagueId);
-        const leagueDoc = await leagueRef.get();
+        // Verify league exists
+        const { data: league, error: leagueError } = await supabase
+            .from('leagues')
+            .select('id')
+            .eq('id', leagueId)
+            .single();
 
-        if (!leagueDoc.exists) {
+        if (leagueError || !league) {
             throw new Error("League not found");
         }
 
-        // Fetch user data for display names
-        const userPromises = userIds.map(uid => firestore.collection('users').doc(uid).get());
-        const userDocs = await Promise.all(userPromises);
+        // Create league member entries
+        const members = userIds.map(uid => ({
+            league_id: leagueId,
+            user_id: uid
+        }));
 
-        const members = userDocs
-            .filter(doc => doc.exists)
-            .map(doc => ({
-                uid: doc.id,
-                displayName: doc.data().displayName || 'Mock User'
-            }));
+        const { data, error } = await supabase
+            .from('league_members')
+            .insert(members)
+            .select();
 
-        // Update league with new members
-        await leagueRef.update({
-            members: firebase.firestore.FieldValue.arrayUnion(...members),
-            memberIds: firebase.firestore.FieldValue.arrayUnion(...userIds)
-        });
+        if (error) {
+            console.error("Error joining mock users to league:", error);
+            throw error;
+        }
 
-        return members.length;
+        return data.length;
     },
 
     /**
      * Cleans up mock data (optional).
      */
     cleanupMockData: async () => {
-        const usersSnapshot = await firestore.collection('users').where('isMock', '==', true).get();
-        const predSnapshot = await firestore.collection('predictions').where('isMock', '==', true).get();
+        // Delete mock predictions
+        const { error: predError } = await supabase
+            .from('predictions')
+            .delete()
+            .eq('is_mock', true);
 
-        const batch = firestore.batch();
-        usersSnapshot.forEach(doc => batch.delete(doc.ref));
-        predSnapshot.forEach(doc => batch.delete(doc.ref));
+        if (predError) {
+            console.error("Error deleting mock predictions:", predError);
+        }
 
-        await batch.commit();
+        // Delete mock users (cascade will handle league memberships)
+        const { error: userError } = await supabase
+            .from('users')
+            .delete()
+            .eq('is_mock', true);
+
+        if (userError) {
+            console.error("Error deleting mock users:", userError);
+        }
+
+        console.log("Mock data cleanup completed");
     }
 };
