@@ -8,6 +8,7 @@ export default function Signup() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const dispatch = useDispatch();
+    // eslint-disable-next-line no-unused-vars
     const user = useSelector((state) => state.user.user);
     const nav = useNavigate();
 

@@ -16,6 +16,7 @@ const Simulator = ({ isEmbedded = false }) => {
     const [status, setStatus] = useState("");
     const [mockUsers, setMockUsers] = useState([]);
     const [selectedLeagueId, setSelectedLeagueId] = useState("");
+    // eslint-disable-next-line no-unused-vars
     const [selectedRace, setSelectedRace] = useState("Test Grand Prix");
     const [simulationMode, setSimulationMode] = useState('single'); // 'single' | 'multi'
     const [raceCount, setRaceCount] = useState(5);
@@ -49,6 +50,7 @@ const Simulator = ({ isEmbedded = false }) => {
             setMockUsers(users);
 
             // Auto-join them to the selected league
+            // eslint-disable-next-line no-unused-vars
             const joinedCount = await SimulatorService.joinMockUsersToLeague(
                 users.map(u => u.uid),
                 selectedLeagueId

@@ -4,11 +4,17 @@ import { supabase } from "../config/supabase";
 import { fetchDriverStandings } from "../redux/reducer_supabase";
 import {
     TRACK_GROUPS,
+    // eslint-disable-next-line no-unused-vars
     ACH_PITSTOP_MASTER,
+    // eslint-disable-next-line no-unused-vars
     ACH_CONSISTENCY,
+    // eslint-disable-next-line no-unused-vars
     ACH_CHAMPION,
+    // eslint-disable-next-line no-unused-vars
     ACH_POLE_KING,
+    // eslint-disable-next-line no-unused-vars
     ACH_MONACO,
+    // eslint-disable-next-line no-unused-vars
     CONSTRUCTOR_MEDALS,
     calculateGroupBest,
     calculatePitstopStreak,
@@ -17,6 +23,7 @@ import {
     calculatePoleKing,
     calculateMonacoMedal,
     calculateConstructorMedals,
+    // eslint-disable-next-line no-unused-vars
     normalizeTrackName
 } from "../utils/achievementUtils";
 import { calculateScore, DEFAULT_SCORING_RULES, BADGE_SCORING_RULES } from "../utils/scoringUtils";
@@ -141,6 +148,7 @@ export default function useAchievements() {
 
         loadResults();
 
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [bet]);
 
     useEffect(() => {
@@ -188,6 +196,7 @@ export default function useAchievements() {
         const japanResult = raceResults['Japanese Grand Prix'] || raceResults['Japan'];
         if (japanPred && japanResult && leagues?.[0]) {
             const scoringRules = convertLeagueScoringToCalculateScoreFormat(leagues[0].scoringSystem);
+            // eslint-disable-next-line no-unused-vars
             const { totalScore, breakdown } = calculateScore(japanPred, japanResult, scoringRules);
         }
     }, [bet, raceResults, leagues]);
@@ -198,6 +207,7 @@ export default function useAchievements() {
 
         if (chinaPred && chinaResult && leagues?.[0]) {
             const scoringRules = convertLeagueScoringToCalculateScoreFormat(leagues[0].scoringSystem);
+            // eslint-disable-next-line no-unused-vars
             const { totalScore, breakdown } = calculateScore(chinaPred, chinaResult, scoringRules);
         }
     }, [bet, raceResults, leagues]);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+// eslint-disable-next-line no-unused-vars
 import Footer from "../../Footer/Footer";
 import Header from "../../Header/Header";
 import { useDispatch, useSelector } from "react-redux";
@@ -55,6 +56,7 @@ export default function MyPredictions() {
         if (scheduleStatus === 'idle') dispatch(fetchSchedule())
         if (user && (!bets || bets.length === 0)) dispatch(fetchBets(user.uid))
         if (user) dispatch(fetchUserLeagues(user.uid)); // Always fetch fresh to get latest rules
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch, drivers.length, scheduleStatus, user, bets.length])
 
 
@@ -198,6 +200,7 @@ export default function MyPredictions() {
                         {schedule
                             .filter(race => race.raceName && race.raceName.toLowerCase().includes("grand prix"))
                             .map((race, index) => {
+                                // eslint-disable-next-line no-unused-vars
                                 const { status, color, bg } = getRaceStatus(race.raceName);
                                 const raceDate = new Date(race.date);
 

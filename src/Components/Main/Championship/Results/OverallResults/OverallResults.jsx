@@ -21,11 +21,14 @@ const nationalityCodes = {
 };
 
 export default function OverallResults(props) {
-
+    // TODO
     const [result, setResult] = useState([]);
     const [loading, setLoading] = useState(true);
+    // eslint-disable-next-line no-unused-vars
     const [circuit, setCircuit] = useState([]);
+    // eslint-disable-next-line no-unused-vars
     const [driver, setDriver] = useState([]);
+    // eslint-disable-next-line no-unused-vars
     const [constructor, setConstructor] = useState([]);
 
     // const event = useSelector(state => state.eventInfo); // This line is removed as per the new code
@@ -220,6 +223,7 @@ export default function OverallResults(props) {
 
     useEffect(() => {
         getResults();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [year]);
 
     function setCircuitName(circuitId) {

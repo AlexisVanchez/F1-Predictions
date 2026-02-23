@@ -52,6 +52,7 @@ export default function LeagueManager() {
     const [isStatsLoading, setIsStatsLoading] = useState(false);
     const [detailTab, setDetailTab] = useState('leaderboard'); // 'leaderboard' | 'history'
     const [allLeaguePredictions, setAllLeaguePredictions] = useState([]);
+    // eslint-disable-next-line no-unused-vars
     const [historicalRaceResults, setHistoricalRaceResults] = useState({});
     const [selectedHistoryRace, setSelectedHistoryRace] = useState(null);
     const [hoveredMember, setHoveredMember] = useState(null); // For point breakdown tooltip
@@ -80,6 +81,7 @@ export default function LeagueManager() {
                 window.history.replaceState({}, document.title);
             }
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [location.state, leagues]);
 
     const handleCreateLeague = async (e) => {

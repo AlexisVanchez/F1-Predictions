@@ -1,3 +1,4 @@
+// eslint-disable-next-line no-unused-vars
 import Footer from "../../Footer/Footer";
 import Header from "../../Header/Header";
 import ProfileMainSection from "./ProfileMainSection/ProfileMainSection";

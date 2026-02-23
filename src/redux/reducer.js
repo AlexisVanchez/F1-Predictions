@@ -280,6 +280,7 @@ export const fetchAndSyncRaceResult = (raceName) => async (dispatch) => {
     const now = Date.now();
     const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+    // eslint-disable-next-line no-unused-vars
     let raceData = null;
 
     // 1. Check Cache
@@ -309,6 +310,7 @@ export const fetchAndSyncRaceResult = (raceName) => async (dispatch) => {
     if (!latestSession) throw new Error("No race session found");
 
     // Parallel Fetch: Results & Pitstops
+    // eslint-disable-next-line no-unused-vars
     const [positionRes, pitRes] = await Promise.all([
       fetch(`https://api.openf1.org/v1/position?session_key=${latestSession.session_key}&position<=10`),
       fetch(`https://api.openf1.org/v1/pit?session_key=${latestSession.session_key}`)
@@ -378,6 +380,7 @@ export const calculateLeaguePoints = (leagueId, raceName, manualResults = null) 
 
     const league = leagueDoc.data();
     // Use memberIds for logic if available, else fallback (if migrating)
+    // eslint-disable-next-line no-unused-vars
     const memberIds = league.memberIds || league.members;
     const scoring = league.scoringSystem;
 

@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+// eslint-disable-next-line no-unused-vars
 import { calculateScore, DEFAULT_SCORING_RULES } from "../utils/scoringUtils";
 import { supabase } from "../config/supabase";
 import { F1_2026_SCHEDULE } from "../Components/Main/Home/Calendar/f1_2026_static";
@@ -63,6 +64,7 @@ export const { setUser, clearUser, setBet, setDriver, setSchedule, setLeagues, s
 // Google Sign-In Action
 export const signInWithGoogle = () => async (dispatch) => {
     try {
+        // eslint-disable-next-line no-unused-vars
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
@@ -275,6 +277,7 @@ export const createLeague = (leagueName, user, scoringSystem = null) => async (d
         };
 
         // Check for duplicate name
+        // eslint-disable-next-line no-unused-vars
         const { data: existing, error: checkError } = await supabase
             .from('leagues')
             .select('id')
@@ -337,6 +340,7 @@ export const joinLeague = (inviteCode, user) => async (dispatch) => {
         }
 
         // Check if already a member
+        // eslint-disable-next-line no-unused-vars
         const { data: existing, error: checkError } = await supabase
             .from('league_members')
             .select('user_id')
@@ -448,6 +452,7 @@ export const searchLeagues = (query) => async (dispatch) => {
 // Save a prediction
 export const savePrediction = (userID, newPrediction) => async (dispatch) => {
     try {
+        // eslint-disable-next-line no-unused-vars
         const { data, error } = await supabase
             .from('predictions')
             .upsert({

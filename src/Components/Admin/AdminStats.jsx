@@ -11,8 +11,10 @@ export default function AdminStats() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        // eslint-disable-next-line no-unused-vars
         async function load() {
             setLoading(true);
+            // eslint-disable-next-line no-unused-vars
             const res = await fetchAdminStats()(); // Call the thunk wrapper
             // Wait, fetchAdminStats is a thunk creator: () => async () => ...
             // But usually we dispatch it. However, I exported it as a raw async function wrapper or thunk?

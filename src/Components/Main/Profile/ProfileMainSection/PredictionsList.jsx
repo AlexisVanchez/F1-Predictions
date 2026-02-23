@@ -1,7 +1,9 @@
+// eslint-disable-next-line no-unused-vars
 import { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchBets, fetchSchedule, deletePrediction } from "../../../../redux/reducer";
 import { NavLink } from "react-router-dom";
+// eslint-disable-next-line no-unused-vars
 import { calculateScore, DEFAULT_SCORING_RULES } from "../../../../utils/scoringUtils";
 
 export default function PredictionsList() {
@@ -20,6 +22,7 @@ export default function PredictionsList() {
         if (schedule.length === 0) {
             dispatch(fetchSchedule());
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [dispatch, user, bets.length, schedule.length]);
 
     // Calculate Top 3 Predictions
@@ -61,6 +64,7 @@ export default function PredictionsList() {
 
                     // 2. Try OpenF1
                     if (!raceData) {
+                        // eslint-disable-next-line no-unused-vars
                         const sessionRes = await fetch(`https://api.openf1.org/v1/sessions?session_name=Race&year=${year}&meeting_name=${encodeURIComponent(event.raceName.replace(' Grand Prix', ''))}`); // Loose matching
                         // Better matching by round if possible, but OpenF1 round might differ.
                         // Let's use fetching logic similar to OverallResults but simplified

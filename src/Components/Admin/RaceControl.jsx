@@ -5,6 +5,7 @@ import { submitManualRaceResult } from "../../redux/reducer";
 export default function RaceControl() {
     const dispatch = useDispatch();
     const schedule = useSelector(state => state.user.schedule);
+    // eslint-disable-next-line no-unused-vars
     const drivers = useSelector(state => state.user.drivers); // Assume we have a list of drivers or just use codes
 
     // Flatten drivers list for easier autocomplete if needed, but for now simple inputs

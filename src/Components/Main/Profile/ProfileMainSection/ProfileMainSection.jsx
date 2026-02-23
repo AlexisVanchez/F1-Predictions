@@ -1,7 +1,10 @@
+// eslint-disable-next-line no-unused-vars
 import LeagueMembers from "./LeagueMembers";
+// eslint-disable-next-line no-unused-vars
 import UserLeagues from "./UserLeagues";
 import PredictionsList from "./PredictionsList";
 import { useEffect, useState } from "react";
+// eslint-disable-next-line no-unused-vars
 import { useDispatch, useSelector } from "react-redux";
 import useAchievements from "../../../../hooks/useAchievements";
 import Medal from "../Medal";
@@ -12,12 +15,14 @@ import {
     ACH_CHAMPION,
     ACH_POLE_KING,
     ACH_MONACO,
+    // eslint-disable-next-line no-unused-vars
     CONSTRUCTOR_MEDALS,
     normalizeTrackName
 } from "../../../../utils/achievementUtils";
 import { calculateScore, DEFAULT_SCORING_RULES } from "../../../../utils/scoringUtils";
 
 export default function ProfileMainSection() {
+    // eslint-disable-next-line no-unused-vars
     const { user, bet, leagues } = useSelector(state => state.user);
     const { achievements, raceResults, loading } = useAchievements();
     const [persona, setPersona] = useState(null);

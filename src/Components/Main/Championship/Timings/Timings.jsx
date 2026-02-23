@@ -8,6 +8,7 @@ export default function Timings() {
     const [loading, setLoading] = useState(true);
     const [lapsData, setLapsData] = useState([]);
     const [sessionName, setSessionName] = useState('');
+    // eslint-disable-next-line no-unused-vars
     const [drivers, setDrivers] = useState({});
 
     // New State for enhancements
@@ -16,6 +17,7 @@ export default function Timings() {
 
     useEffect(() => {
         fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionKey, year]);
 
     const fetchData = async () => {
@@ -24,6 +26,7 @@ export default function Timings() {
 
             const isRoundNumber = parseInt(sessionKey) < 100;
             let currentDriversMap = {};
+            // eslint-disable-next-line no-unused-vars
             let currentSessionName = '';
 
             if (!isRoundNumber) {

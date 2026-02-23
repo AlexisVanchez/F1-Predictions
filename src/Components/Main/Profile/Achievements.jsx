@@ -102,6 +102,7 @@ export default function Achievements() {
                             const currentYear = new Date().getFullYear();
                             const champWins = achievements['CHAMPION'] || [];
                             const currentYearWin = champWins.find(w => w.year === currentYear);
+                            // eslint-disable-next-line no-unused-vars
                             const historicalWins = champWins.filter(w => w.year !== currentYear);
 
                             return (

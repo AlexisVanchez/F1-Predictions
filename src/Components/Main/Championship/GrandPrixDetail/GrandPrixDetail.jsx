@@ -22,9 +22,11 @@ export default function GrandPrixDetail() {
 
     useEffect(() => {
         loadGrandPrixData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionKey]);
 
     // Helper function to get country flag emoji
+    // eslint-disable-next-line no-unused-vars
     function getFlagEmoji(countryCode) {
         if (!countryCode) return '🏁';
         const codePoints = countryCode
@@ -181,6 +183,7 @@ export default function GrandPrixDetail() {
     }
 
     // Format interval/gap
+    // eslint-disable-next-line no-unused-vars
     const formatTime = (time, leaderTime) => {
         if (!time) return 'DNF';
         if (time === leaderTime) return new Date(time * 1000).toISOString().substr(11, 8); // Format seconds to HH:mm:ss

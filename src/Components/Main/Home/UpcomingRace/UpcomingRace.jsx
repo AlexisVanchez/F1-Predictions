@@ -12,6 +12,7 @@ export default function UpcomingRace() {
     const [trackData, setTrackData] = useState(null);
     const [trackPath, setTrackPath] = useState('');
     const [previousWinner, setPreviousWinner] = useState(null);
+    // eslint-disable-next-line no-unused-vars
     const [loading, setLoading] = useState(true);
 
     // Find next event
@@ -114,6 +115,7 @@ export default function UpcomingRace() {
             }
 
             // 2. Static Stats (Length, Record)
+            // eslint-disable-next-line no-unused-vars
             const circuitInfo = CIRCUIT_STATS[searchKey] || CIRCUIT_STATS[locationMatch?.location] || {};
 
             // 3. Fetch Previous Winner & Total Laps
@@ -171,6 +173,7 @@ export default function UpcomingRace() {
 
     if (!nextEvent) return <div className="p-10 text-center text-gray-500">Loading upcoming race...</div>;
 
+    // eslint-disable-next-line no-unused-vars
     const eventDateLines = new Date(nextEvent.date).toDateString().split(' '); // [Day, Month, Date, Year]
 
     return (

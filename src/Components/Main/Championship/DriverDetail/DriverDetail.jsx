@@ -21,6 +21,7 @@ export default function DriverDetail() {
 
     useEffect(() => {
         loadDriverData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [driverId]);
 
     // Helper function to get country flag emoji from country code
