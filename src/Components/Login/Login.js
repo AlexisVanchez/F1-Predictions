@@ -1,16 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../config/supabase';
-import { signInWithGoogle } from '../../redux/reducer_supabase';
+import { signInWithGoogle, signInWithTelegram } from '../../redux/reducer_supabase';
 import { useDispatch, useSelector } from 'react-redux';
+
+// Telegram bot username (set in .env.local)
+const TELEGRAM_BOT_USERNAME = process.env.REACT_APP_TELEGRAM_BOT_USERNAME || 'RaceLogin_bot';
 
 export default function Login() {
   const [loading, setLoading] = useState(false);
+  const [telegramLoading, setTelegramLoading] = useState(false);
   const [error, setError] = useState('');
   const dispatch = useDispatch();
   // eslint-disable-next-line no-unused-vars
   const user = useSelector((state) => state.user.user);
   const nav = useNavigate();
+  const telegramBtnRef = useRef(null);
 
   useEffect(() => {
     // If already authenticated, go straight to home
@@ -29,6 +34,57 @@ export default function Login() {
 
     return () => subscription.unsubscribe();
   }, [nav]);
+
+  // Load Telegram widget script once and attach it to the button container
+  const setupTelegramWidget = useCallback(() => {
+    if (!telegramBtnRef.current) return;
+
+    // Remove any previously injected script to avoid duplicates
+    const existing = document.getElementById('telegram-login-script');
+    if (existing) existing.remove();
+
+    const script = document.createElement('script');
+    script.id = 'telegram-login-script';
+    script.src = 'https://telegram.org/js/telegram-widget.js?22';
+    script.setAttribute('data-telegram-login', TELEGRAM_BOT_USERNAME);
+    script.setAttribute('data-size', 'large');
+    script.setAttribute('data-userpic', 'false');
+    script.setAttribute('data-request-access', 'write');
+    // Use callback mode — Telegram calls window.onTelegramAuth
+    script.setAttribute('data-onauth', 'window.onTelegramAuth(user)');
+    script.async = true;
+
+    // Global callback Telegram will invoke with the user object
+    window.onTelegramAuth = async (tgUser) => {
+      setTelegramLoading(true);
+      setError('');
+      try {
+        // Build initData string from the tgUser object Telegram passes to the callback
+        // Fields: id, first_name, last_name, username, photo_url, auth_date, hash
+        const params = Object.entries(tgUser)
+          .filter(([k]) => k !== 'hash')
+          .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+          .join('&');
+        const initData = `${params}&hash=${tgUser.hash}`;
+
+        await dispatch(signInWithTelegram(initData));
+        // Navigation handled by onAuthStateChange above
+      } catch (err) {
+        setError('Telegram sign-in failed. Please try again.');
+        setTelegramLoading(false);
+      }
+    };
+
+    telegramBtnRef.current.appendChild(script);
+  }, [dispatch]);
+
+  useEffect(() => {
+    setupTelegramWidget();
+    return () => {
+      // Cleanup global callback on unmount
+      delete window.onTelegramAuth;
+    };
+  }, [setupTelegramWidget]);
 
   async function handleGoogleSignIn() {
     try {
@@ -72,7 +128,7 @@ export default function Login() {
         {/* Google Sign-In Button */}
         <button
           onClick={handleGoogleSignIn}
-          disabled={loading}
+          disabled={loading || telegramLoading}
           className='w-full bg-white hover:bg-gray-100 text-gray-800 font-semibold py-4 px-6 rounded-lg shadow-lg transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl transform hover:-translate-y-1'
         >
           {loading ? (
@@ -91,10 +147,36 @@ export default function Login() {
           )}
         </button>
 
+        {/* Divider */}
+        <div className='w-full flex items-center gap-3 my-5'>
+          <div className='flex-1 h-px bg-white/10'></div>
+          <span className='text-f1-light-gray text-xs uppercase tracking-widest'>or</span>
+          <div className='flex-1 h-px bg-white/10'></div>
+        </div>
+
+        {/* Telegram Sign-In Button */}
+        {telegramLoading ? (
+          <div className='w-full flex items-center justify-center py-4 gap-3'>
+            <div className='f1-loader'></div>
+            <span className='text-f1-light-gray text-sm'>Connecting Telegram…</span>
+          </div>
+        ) : (
+          <div
+            ref={telegramBtnRef}
+            className='w-full flex justify-center [&>iframe]:!rounded-lg [&>iframe]:!shadow-lg'
+            style={{ minHeight: '50px' }}
+          />
+        )}
+
+        {/* Hint about Telegram */}
+        <p className='mt-3 text-f1-light-gray text-xs text-center opacity-70'>
+          Telegram login opens a secure Telegram popup
+        </p>
+
         {/* Additional Info */}
-        <div className='mt-8 text-center'>
+        <div className='mt-6 text-center'>
           <p className='text-f1-light-gray text-sm'>
-            No account? Sign in with Google to get started!
+            No account? Sign in to get started!
           </p>
         </div>
 
@@ -107,7 +189,7 @@ export default function Login() {
         F1
       </div>
       <div className='absolute top-10 right-10 text-f1-gray opacity-20 text-6xl font-bold select-none'>
-        2024
+        2026
       </div>
     </div>
   );

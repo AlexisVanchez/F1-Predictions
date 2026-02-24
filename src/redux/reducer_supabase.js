@@ -88,6 +88,49 @@ export const signInWithGoogle = () => async (dispatch) => {
     }
 };
 
+// Telegram Sign-In Action
+// `initData` is the raw query string provided by Telegram's WebApp/Login Widget
+export const signInWithTelegram = (initData) => async (dispatch) => {
+    try {
+        const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+        const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+
+        const res = await fetch(
+            `${supabaseUrl}/functions/v1/telegram-auth`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': supabaseAnonKey,
+                    'Authorization': `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({ initData }),
+            }
+        );
+
+        const json = await res.json();
+
+        if (!res.ok) {
+            throw new Error(json.error || 'Telegram auth failed');
+        }
+
+        // Inject the session into the Supabase client — onAuthStateChange in App.js
+        // will pick this up and call fetchUserProfile automatically.
+        const { error: sessionError } = await supabase.auth.setSession({
+            access_token: json.access_token,
+            refresh_token: json.refresh_token,
+        });
+
+        if (sessionError) throw sessionError;
+
+        console.log('Telegram Sign-In successful');
+        return { success: true };
+    } catch (error) {
+        console.error('Error during Telegram Sign-In:', error.message);
+        throw error;
+    }
+};
+
 // Sign Out Action
 export const signOut = () => async (dispatch) => {
     try {
