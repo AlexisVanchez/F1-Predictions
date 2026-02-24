@@ -8,42 +8,34 @@ const corsHeaders = {
 };
 
 /**
- * Verifies Telegram's HMAC-SHA256 signature on the initData string.
- * https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
+ * Verifies Telegram Login Widget data.
+ * Telegram Login Widget uses SHA256(bot_token) as the HMAC-SHA256 secret key.
+ * https://core.telegram.org/widgets/login#checking-authorization
  */
-async function verifyTelegramData(initData, botToken) {
-    const pairs = initData.split("&");
-    const hashEntry = pairs.find((p) => p.startsWith("hash="));
-    if (!hashEntry) return null;
-
-    const receivedHash = hashEntry.split("=")[1];
-    const dataCheckString = pairs
-        .filter((p) => !p.startsWith("hash="))
-        .sort()
-        .join("\n");
-
+async function verifyTelegramLoginWidget(data, botToken) {
     const encoder = new TextEncoder();
 
-    const secretKey = await crypto.subtle.importKey(
-        "raw",
-        encoder.encode("WebAppData"),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"]
-    );
-    const secretHash = await crypto.subtle.sign(
-        "HMAC",
-        secretKey,
+    // secret_key = SHA256(bot_token) — NOT HMAC, just plain SHA256
+    const secretKeyBuffer = await crypto.subtle.digest(
+        "SHA-256",
         encoder.encode(botToken)
     );
 
+    // data_check_string: all fields except hash, sorted alphabetically, joined with \n
+    const dataCheckString = Object.keys(data)
+        .filter((k) => k !== "hash")
+        .sort()
+        .map((k) => `${k}=${data[k]}`)
+        .join("\n");
+
     const hmacKey = await crypto.subtle.importKey(
         "raw",
-        secretHash,
+        secretKeyBuffer,
         { name: "HMAC", hash: "SHA-256" },
         false,
         ["sign"]
     );
+
     const computedHashBuffer = await crypto.subtle.sign(
         "HMAC",
         hmacKey,
@@ -54,20 +46,10 @@ async function verifyTelegramData(initData, botToken) {
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("");
 
-    if (computedHash !== receivedHash) return null;
-
-    const result = {};
-    for (const pair of pairs) {
-        const eqIdx = pair.indexOf("=");
-        const key = pair.slice(0, eqIdx);
-        const value = decodeURIComponent(pair.slice(eqIdx + 1));
-        result[key] = value;
-    }
-    return result;
+    return computedHash === data.hash;
 }
 
 serve(async (req) => {
-    // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
@@ -81,30 +63,31 @@ serve(async (req) => {
             );
         }
 
-        const { initData } = await req.json();
-        if (!initData) {
+        // Expect the raw user object from the Telegram Login Widget callback
+        const telegramUser = await req.json();
+        if (!telegramUser || !telegramUser.id || !telegramUser.hash) {
             return new Response(
-                JSON.stringify({ error: "initData is required" }),
+                JSON.stringify({ error: "Invalid Telegram user data" }),
                 { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
-        const verified = await verifyTelegramData(initData, botToken);
-        if (!verified) {
+        const isValid = await verifyTelegramLoginWidget(telegramUser, botToken);
+        if (!isValid) {
             return new Response(
                 JSON.stringify({ error: "Invalid Telegram data signature" }),
                 { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
         }
 
-        const telegramUser = JSON.parse(verified.user || "{}");
+        // Extract user fields directly (Login Widget sends them as top-level fields)
         const telegramId = String(telegramUser.id);
-        const firstName = telegramUser.first_name || "";
-        const lastName = telegramUser.last_name || "";
-        const displayName = [firstName, lastName].filter(Boolean).join(" ") || "F1 Fan";
+        const displayName = [telegramUser.first_name, telegramUser.last_name]
+            .filter(Boolean).join(" ") || "F1 Fan";
         const photoUrl = telegramUser.photo_url || "";
         const syntheticEmail = `${telegramId}@telegram.auth`;
         const password = `tg_${botToken.slice(0, 6)}_${telegramId}`;
+
 
         const supabaseAdmin = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",

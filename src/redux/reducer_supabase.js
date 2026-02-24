@@ -89,8 +89,8 @@ export const signInWithGoogle = () => async (dispatch) => {
 };
 
 // Telegram Sign-In Action
-// `initData` is the raw query string provided by Telegram's WebApp/Login Widget
-export const signInWithTelegram = (initData) => async (dispatch) => {
+// `tgUser` is the raw user object from the Telegram Login Widget callback
+export const signInWithTelegram = (tgUser) => async (dispatch) => {
     try {
         const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
         const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -104,7 +104,8 @@ export const signInWithTelegram = (initData) => async (dispatch) => {
                     'apikey': supabaseAnonKey,
                     'Authorization': `Bearer ${supabaseAnonKey}`,
                 },
-                body: JSON.stringify({ initData }),
+                // Send the raw tgUser object — Edge Function verifies and extracts fields directly
+                body: JSON.stringify(tgUser),
             }
         );
 

@@ -59,15 +59,8 @@ export default function Login() {
       setTelegramLoading(true);
       setError('');
       try {
-        // Build initData string from the tgUser object Telegram passes to the callback
-        // Fields: id, first_name, last_name, username, photo_url, auth_date, hash
-        const params = Object.entries(tgUser)
-          .filter(([k]) => k !== 'hash')
-          .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
-          .join('&');
-        const initData = `${params}&hash=${tgUser.hash}`;
-
-        await dispatch(signInWithTelegram(initData));
+        // Pass the raw tgUser object — Edge Function verifies it directly
+        await dispatch(signInWithTelegram(tgUser));
         // Navigation handled by onAuthStateChange above
       } catch (err) {
         setError('Telegram sign-in failed. Please try again.');
